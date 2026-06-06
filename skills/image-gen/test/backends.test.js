@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { dispatch, buildCodexArgs } = require('../scripts/lib/backends');
+const { dispatch, buildCodexArgs, buildCodexInstruction } = require('../scripts/lib/backends');
 
 function fakeRunner(calls) {
   return async (spec) => {
@@ -23,15 +23,28 @@ test('codex-cli scrubs OPENAI_API_KEY from child env', async () => {
   assert.ok(!('OPENAI_API_KEY' in calls[0].env), 'OPENAI_API_KEY must be deleted');
   assert.strictEqual(calls[0].env.PATH, '/usr/bin');
   assert.strictEqual(calls[0].cmd, 'codex');
+  // prompt is delivered on stdin, NOT as an argv positional (avoids variadic --image swallow)
+  assert.match(calls[0].input, /draw a lamb/);
+  assert.ok(!calls[0].args.join(' ').includes('draw a lamb'), 'prompt must not be in argv');
 });
 
-test('codex args include prompt, references and out path', () => {
-  const args = buildCodexArgs({ fullPrompt: 'draw', references: ['/a.png', '/b.png'], outPath: '/o.png' });
+test('codex args carry sandbox + skip-git flags and references via --image (no prompt)', () => {
+  const args = buildCodexArgs({ references: ['/a.png', '/b.png'] });
   const joined = args.join(' ');
-  assert.match(joined, /exec/);
-  assert.match(joined, /\/a\.png/);
-  assert.match(joined, /\/b\.png/);
-  assert.match(joined, /\/o\.png/);
+  assert.match(joined, /^exec /);
+  assert.match(joined, /--skip-git-repo-check/);
+  assert.match(joined, /--sandbox workspace-write/);
+  assert.match(joined, /--image \/a\.png/);
+  assert.match(joined, /--image \/b\.png/);
+});
+
+test('codex instruction carries the out path and prompt, and a ref note when references exist', () => {
+  const withRef = buildCodexInstruction({ fullPrompt: 'a calm sea', references: ['/m.png'], outPath: '/o.png' });
+  assert.match(withRef, /\/o\.png/);
+  assert.match(withRef, /a calm sea/);
+  assert.match(withRef, /reference image/i);
+  const noRef = buildCodexInstruction({ fullPrompt: 'a lamp', references: [], outPath: '/o.png' });
+  assert.doesNotMatch(noRef, /reference image/i);
 });
 
 test('dispatch returns imagePath and backend meta on success', async () => {
