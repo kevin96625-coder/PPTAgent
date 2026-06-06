@@ -1,0 +1,56 @@
+const test = require('node:test');
+const assert = require('node:assert');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { parseArgs, run } = require('../scripts/generate');
+
+function tmpRun() { return fs.mkdtempSync(path.join(os.tmpdir(), 'gen-')); }
+
+test('parseArgs defaults backend to codex-cli and splits references', () => {
+  const a = parseArgs(['--run-dir', '/r', '--label', 'scene-01', '--out', '/o.png',
+    '--prompt', 'hi', '--reference', '/a.png,/b.png']);
+  assert.strictEqual(a.backend, 'codex-cli');
+  assert.deepStrictEqual(a.references, ['/a.png', '/b.png']);
+  assert.strictEqual(a.label, 'scene-01');
+});
+
+test('run with --estimate-only returns estimate and writes nothing', async () => {
+  const dir = tmpRun();
+  const out = await run(parseArgs([
+    '--run-dir', dir, '--label', 'scene-01', '--out', path.join(dir, 'o.png'),
+    '--prompt', 'a lamb', '--backend', 'gemini-api', '--model', 'nano-banana-pro', '--estimate-only',
+  ]), { runner: async () => ({ code: 0 }) });
+  assert.ok(out.estimate.estUsdTotal > 0);
+  assert.strictEqual(fs.existsSync(path.join(dir, 'image-manifest.json')), false);
+});
+
+test('run (codex-cli) invokes runner, writes manifest entry with zero cost', async () => {
+  const dir = tmpRun();
+  const outPath = path.join(dir, 'o.png');
+  const calls = [];
+  const out = await run(parseArgs([
+    '--run-dir', dir, '--label', 'master', '--out', outPath, '--prompt', 'jesus',
+    '--reference', '/m.png',
+  ]), { runner: async (s) => { calls.push(s); fs.writeFileSync(outPath, 'PNG'); return { code: 0, stdout: '', stderr: '' }; } });
+
+  assert.strictEqual(out.imagePath, outPath);
+  const m = JSON.parse(fs.readFileSync(path.join(dir, 'image-manifest.json'), 'utf8'));
+  assert.strictEqual(m.entries.master.backend, 'codex-cli');
+  assert.strictEqual(m.entries.master.estUsd, 0);
+  assert.ok(!('OPENAI_API_KEY' in calls[0].env));
+});
+
+test('run throws if neither --prompt nor --prompt-file given', async () => {
+  await assert.rejects(run(parseArgs(['--run-dir', '/r', '--label', 'x', '--out', '/o.png']), {}), /prompt/);
+});
+
+test('run with --redo bumps redo count on existing label', async () => {
+  const dir = tmpRun();
+  const outPath = path.join(dir, 'o.png');
+  const opts = { runner: async () => { fs.writeFileSync(outPath, 'PNG'); return { code: 0 }; } };
+  const base = ['--run-dir', dir, '--label', 'scene-01', '--out', outPath, '--prompt', 'x'];
+  await run(parseArgs(base), opts);
+  const out2 = await run(parseArgs(base.concat(['--redo'])), opts);
+  assert.strictEqual(out2.redoCount, 1);
+});
