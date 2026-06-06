@@ -1,0 +1,13 @@
+{
+  "name": "image-gen",
+  "version": "0.1.0",
+  "description": "Multi-backend AI image generation with character-consistency. Default backend drives Codex CLI gpt-image-2 on a ChatGPT subscription (no API key).",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "check-env": "node check_env.js",
+    "gen": "node scripts/generate.js"
+  },
+  "license": "ISC"
+}
