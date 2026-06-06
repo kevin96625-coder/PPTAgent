@@ -1,10 +1,10 @@
 'use strict';
 
-const { execSync } = require('node:child_process');
+const { execFileSync } = require('node:child_process');
 
 function realWhich(cmd) {
   try {
-    return execSync(`command -v ${cmd}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || null;
+    return execFileSync('command', ['-v', cmd], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || null;
   } catch (_) {
     return null;
   }

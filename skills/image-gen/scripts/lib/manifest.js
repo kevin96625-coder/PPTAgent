@@ -66,7 +66,7 @@ function record(runDir, label, entry) {
     estUsd: Number(entry.estUsd) || 0,
     redoCount: Number(entry.redoCount) || 0,
     promptHash: entry.promptHash || null,
-    timestamp: entry.timestamp || null,
+    timestamp: entry.timestamp || new Date().toISOString(),
   };
   recompute(m);
   atomicWrite(runDir, m);

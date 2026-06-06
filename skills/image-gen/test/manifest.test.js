@@ -51,3 +51,10 @@ test('bumpRedo increments and persists', () => {
   assert.strictEqual(n, 1);
   assert.strictEqual(load(dir).entries['scene-01'].redoCount, 1);
 });
+
+test('record without explicit timestamp defaults to an ISO date string', () => {
+  const dir = tmpRun();
+  const m = record(dir, 'scene-01', { backend: 'codex-cli', estUsd: 0, redoCount: 0, path: 'x.png' });
+  assert.ok(typeof m.entries['scene-01'].timestamp === 'string' && m.entries['scene-01'].timestamp.length > 0);
+  assert.match(m.entries['scene-01'].timestamp, /^\d{4}-\d{2}-\d{2}T/);
+});

@@ -80,7 +80,10 @@ function defaultRunner(spec) {
     child.stderr.on('data', (d) => { stderr += d.toString(); });
     child.on('error', reject);
     child.on('close', (code) => resolve({ code: code == null ? -1 : code, stdout, stderr }));
-    if (spec.input != null) { child.stdin.write(spec.input); child.stdin.end(); }
+    if (spec.input != null) {
+      try { child.stdin.write(spec.input); child.stdin.end(); }
+      catch (_) { /* child already exited; broken pipe is expected */ }
+    }
   });
 }
 

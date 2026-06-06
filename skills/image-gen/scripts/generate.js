@@ -69,6 +69,9 @@ async function run(args, deps = {}) {
 
   const promptHash = crypto.createHash('sha256').update(fullPrompt).digest('hex').slice(0, 12);
   const existing = manifest.load(args.runDir).entries[args.label];
+  if (args.redo && !existing) {
+    console.warn(`warning: --redo given for new label "${args.label}"; nothing to redo, redoCount stays 0`);
+  }
   const redoCount = args.redo && existing ? (existing.redoCount || 0) + 1 : (existing ? existing.redoCount || 0 : 0);
 
   manifest.record(args.runDir, args.label, {
