@@ -1,20 +1,35 @@
 'use strict';
 
-// Codex `exec` argument template. The reference-image flag (`--image`) is the
-// one runtime-version-dependent piece — verified in Task 9 against the installed
-// codex version. Keep all Codex specifics here.
-function buildCodexArgs({ fullPrompt, references, outPath }) {
-  const args = ['exec'];
+// Codex `exec` argument template — VERIFIED against codex-cli 0.137.0 (2026-06-07,
+// real subscription generation). Working invocation:
+//   printf '%s' "<instruction>" | codex exec --skip-git-repo-check \
+//     --sandbox workspace-write --image <ref> [--image <ref> ...]
+// Notes baked in from the live test:
+//  - The prompt MUST be delivered on STDIN, not as an argv positional: `--image`
+//    is variadic and would otherwise swallow a trailing prompt argument.
+//  - `--sandbox workspace-write` is required so Codex can save the PNG to disk.
+//  - `--skip-git-repo-check` allows running when the RUN_DIR is not a trusted git repo.
+// Keep all Codex specifics here.
+function buildCodexArgs({ references }) {
+  const args = ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write'];
   for (const ref of references || []) {
     args.push('--image', ref);
   }
-  // Instruct the built-in image_gen tool explicitly and pin the output path.
-  const instruction =
-    `$imagegen Generate ONE image and save it to "${outPath}". ` +
-    `Use the attached reference image(s) to keep the main character visually identical. ` +
-    `Prompt:\n${fullPrompt}`;
-  args.push(instruction);
   return args;
+}
+
+// The instruction is delivered to Codex on STDIN (see buildCodexArgs note).
+function buildCodexInstruction({ fullPrompt, references, outPath }) {
+  const refNote = references && references.length
+    ? 'The attached reference image(s) define the main character — keep that character '
+      + 'visually identical (face, hair, clothing, art style). '
+    : '';
+  return (
+    `Use your built-in image generation tool to generate ONE image and save it to "${outPath}". `
+    + refNote
+    + 'Do not create, modify, or delete any other files. After saving, stop immediately.\n\n'
+    + `Image prompt:\n${fullPrompt}`
+  );
 }
 
 function buildGeminiArgs({ fullPrompt, references, outPath, model }) {
@@ -38,8 +53,9 @@ async function dispatch(opts) {
   if (backend === 'codex-cli') {
     // CRITICAL: never let Codex see an API key, or it bills the API instead of the subscription.
     delete env.OPENAI_API_KEY;
-    const args = buildCodexArgs({ fullPrompt, references, outPath });
-    const res = await runner({ cmd: 'codex', args, env });
+    const args = buildCodexArgs({ references });
+    const input = buildCodexInstruction({ fullPrompt, references, outPath });
+    const res = await runner({ cmd: 'codex', args, env, input });
     if (!res || res.code !== 0) {
       throw new Error(`codex-cli failed (code ${res && res.code}): ${res && res.stderr}`);
     }
@@ -87,4 +103,4 @@ function defaultRunner(spec) {
   });
 }
 
-module.exports = { dispatch, defaultRunner, buildCodexArgs, buildGeminiArgs, buildOpenaiArgs };
+module.exports = { dispatch, defaultRunner, buildCodexArgs, buildCodexInstruction, buildGeminiArgs, buildOpenaiArgs };
