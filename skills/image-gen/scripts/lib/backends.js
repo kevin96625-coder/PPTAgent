@@ -65,4 +65,23 @@ async function dispatch(opts) {
   throw new Error(`dispatch: unknown backend "${backend}"`);
 }
 
-module.exports = { dispatch, buildCodexArgs, buildGeminiArgs, buildOpenaiArgs };
+const { spawn } = require('node:child_process');
+
+/**
+ * Real subprocess runner. @param {{cmd, args, env, input?}} spec
+ * @returns {Promise<{code:number, stdout:string, stderr:string}>}
+ */
+function defaultRunner(spec) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(spec.cmd, spec.args, { env: spec.env });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d) => { stdout += d.toString(); });
+    child.stderr.on('data', (d) => { stderr += d.toString(); });
+    child.on('error', reject);
+    child.on('close', (code) => resolve({ code: code == null ? -1 : code, stdout, stderr }));
+    if (spec.input != null) { child.stdin.write(spec.input); child.stdin.end(); }
+  });
+}
+
+module.exports = { dispatch, defaultRunner, buildCodexArgs, buildGeminiArgs, buildOpenaiArgs };

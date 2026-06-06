@@ -62,3 +62,16 @@ test('gemini-api adapter calls runner with model + key from env', async () => {
 test('unknown backend throws', async () => {
   await assert.rejects(dispatch({ backend: 'nope', fullPrompt: 'x', references: [], outPath: '/o', runner: async () => ({}), env: {} }), /unknown backend/i);
 });
+
+const { defaultRunner } = require('../scripts/lib/backends');
+
+test('defaultRunner executes a real process and captures exit code + stdout', async () => {
+  const res = await defaultRunner({ cmd: 'node', args: ['-e', "process.stdout.write('hi')"], env: process.env });
+  assert.strictEqual(res.code, 0);
+  assert.match(res.stdout, /hi/);
+});
+
+test('defaultRunner reports non-zero exit', async () => {
+  const res = await defaultRunner({ cmd: 'node', args: ['-e', 'process.exit(3)'], env: process.env });
+  assert.strictEqual(res.code, 3);
+});
