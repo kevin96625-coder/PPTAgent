@@ -4,7 +4,8 @@
 > **核心执行原则**:**全貌用活的路线图(本文件,里程碑粒度),落地用即时的详细计划(临执行前用 writing-plans 一个个写)。** 详细计划保鲜期短——写得离执行越远,越会被执行推翻(本主线停滞的根因正是一份过早写死的大计划)。所以本文件只到里程碑粒度;每个里程碑临做时才产出带 TDD 步骤/完整代码的 plan。
 > 维护:每完成一个里程碑、或认知被推翻时,回来改本文件。
 > 上游:战略 `FUSION_PLAN.md`;独立审核 `FUSION_PLAN_REVIEW.md`;进度记忆 `fusion-mainline-progress`。
-> 最近更新:2026-06-07(M1 完成、M2 brainstorm 完成)。
+> 🔴 **明天入口 / 最新发现**:`docs/superpowers/2026-06-07-dogfood-findings-and-next-steps.md`(M2 完成 + 真实 dogfood 实测 + 下一步)。
+> 最近更新:2026-06-07(M1 完成、M2 代码完成、真实 12 页 dogfood 跑完 → 发现瓶颈在 slide-core,新增 M2.5 里程碑)。
 
 ---
 
@@ -25,14 +26,21 @@
 |---|--------|------|--------|------|
 | P0 | 基线 + 源核实 | ✅ 完成 | 实测基线、核实 Akxan、修 Gemini bug | — |
 | M1 | `--stop-at` 灵活性 | ✅ 完成 | 分阶段停止 + 复用 --run-id 恢复 | P0 |
-| **M2** | **质量门控** | ✅ 代码完成(基线 Task0 待用户跑) | planning_validator + reviewer 页型上下文 + 方法论嵌入 | P0 |
-| P3 | 排版 + 配色 | ⚪ 待办 | 7 级字号阶梯 + 60/30/10 配色校验 | M2 |
+| **M2** | **质量门控** | ✅ 代码完成 + 真实 dogfood 验证 | planning_validator + reviewer 页型上下文 + 方法论嵌入 | P0 |
+| **M2.5** | **🔴 slide-core 硬化 + 生成即自修(质量+效率)** | ⚪ **下一个(优先于 P3)** | 生成后确定性自修(安全区/14px/对比度)+ SVG 层密度防线 + review 效率 | M2(dogfood 实测驱动) |
+| P3 | 排版 + 配色 | ⚪ 待办 | 7 级字号阶梯 + 60/30/10 配色校验(14px floor 被 M2.5 覆盖) | M2.5 |
 | P4 | 资源注入 | ⚪ 待办 | Akxan 资源库 + Node assembler 按需注入 | M2;Akxan(已核实) |
 | P5 | PPTX 导出 | ⚪ 待办 | 方案 D MVP + 统一 ppt/export + 复用 storybook | bible-class Plan4 更佳 |
 | P6 | 智能配图 | ⚪ 待办 | 复用 skills/image-gen(Plan1 已完成) | Plan1 ✅ |
 | P7 | core 抽离 + MCP | ⚪ 待办 | core/(Node/TS)+ MCP server,大重构 | 最后做 |
 
-**当前推荐顺序**:M2 →(B/F 收尾切片,可选)→ P3 → P5(方案D MVP)→ P4 → P6 → P7。
+**当前推荐顺序**:M2 ✅ → **M2.5 slide-core 硬化(下一个,实测驱动)** → P3 → P5(方案D MVP)→ P4 → P6 → P7。(B/F 收尾切片可选,插在任意处。)
+
+### 🔴 M2.5 — slide-core 硬化 + 生成即自修(下一个里程碑,dogfood 实测驱动)
+**动因**:真实 12 页跑实测——5/12 页首审失败,原因集中在 slide-core 生成时的**确定性硬违规**(标题顶破 60px 安全区[01/02/04/06/07]、13px 字[03/05/07/09]、SVG 阶段加超密度[03/04/06/07]、对比度[06]),slide-core 现有"生成后校验"**只报不修** → 漏到 Gemini 触发昂贵 fix loop(整套 1h53m)。
+**范围**(brainstorm 细化):① 生成后**确定性自修**(安全区钳位、字号抬到 14、对比度修正)送 Gemini 前清掉硬违规;② SVG/draft 层补密度防线(planning_validator 只管大纲);③ review-core 效率(截断/重审、`node` 替 `npx tsx` 冷启动、瘦身 prompt)。
+**目标**(对今晚基线):首轮通过率 58%→≥85%、平均修复轮次 0.8→≤0.3、wall-clock 大降。
+**详见**:`docs/superpowers/2026-06-07-dogfood-findings-and-next-steps.md`。
 
 ---
 
