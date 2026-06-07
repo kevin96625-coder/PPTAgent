@@ -63,6 +63,17 @@ test('buildStyleLock throws when characterDesc missing required keys', () => {
   }), /characterDesc/);
 });
 
+test('buildStyleLock inserts $ sequences in characterDesc literally (no regex replacement-pattern expansion)', () => {
+  const lock = buildStyleLock({
+    preset: 'flat-cartoon',
+    presetYaml: FLAT_CARTOON_YAML,
+    characterDesc: { ...CHARACTER_DESC, clothing: 'robe priced $5 with $& trim ($1 each)' },
+  });
+  assert.match(lock.identity_block, /robe priced \$5 with \$& trim \(\$1 each\)/);
+  // and the fix must not re-introduce an unfilled token
+  assert.doesNotMatch(lock.identity_block, /\{[a-z_]+\}/);
+});
+
 test('writeStyleLock creates style.lock.json, style.lock.identity.txt, style.lock.style.txt', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stlock-'));
   const lock = buildStyleLock({ preset: 'flat-cartoon', presetYaml: FLAT_CARTOON_YAML, characterDesc: CHARACTER_DESC });

@@ -37,13 +37,15 @@ function buildStyleLock({ preset, presetYaml, characterDesc }) {
   }
 
   // Fill placeholders in the identity_block_template.
+  // Use a function replacer so `$` sequences in the description (e.g. "$&", "$1")
+  // are inserted literally rather than interpreted as regex replacement patterns.
   let identity_block = presetYaml.identity_block_template;
   for (const key of REQUIRED_CHAR_KEYS) {
-    identity_block = identity_block.replace(new RegExp(`\\{${key}\\}`, 'g'), characterDesc[key]);
+    identity_block = identity_block.replace(new RegExp(`\\{${key}\\}`, 'g'), () => characterDesc[key]);
   }
   // Also replace any extra keys provided.
   for (const [key, val] of Object.entries(characterDesc)) {
-    identity_block = identity_block.replace(new RegExp(`\\{${key}\\}`, 'g'), String(val));
+    identity_block = identity_block.replace(new RegExp(`\\{${key}\\}`, 'g'), () => String(val));
   }
 
   return {
