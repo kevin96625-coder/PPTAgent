@@ -23,7 +23,7 @@ Optimize SVG slide layout and aesthetics via Gemini. Gemini's role is to propose
 
 ## Inputs
 - `run_dir`
-- `mode`: `review` | `holistic`
+- `mode`: `review` | `holistic` | `bible_review`
 - `slide_index`: slide number (01-indexed) — required for `mode=review`, ignored for `mode=holistic`
 
 ## Outputs
@@ -91,6 +91,116 @@ For `mode=holistic`:
 6. Compute weighted `overall_coherence` score.
 7. Output `deck_coordination` suggestions only, each with `slides_affected`, violated dimension, and concrete rebalance recommendation.
 8. Write `${run_dir}/reviews/review-holistic.md` following the Holistic Scoring Output format from `reviewer.md`.
+
+### Bible Review Mode Execution (`mode=bible_review`)
+
+For `mode=bible_review`:
+
+**Additional inputs (required):**
+- `scene_label` — the label of the scene to review (e.g. `scene-03` or `master`)
+- `image_path` — absolute path to the generated image PNG
+- `source_file` — absolute path to `lesson-source.json` (the authoritative scripture source)
+
+**Purpose:** Theological and historical accuracy review of a generated bible-class illustration. This mode ONLY flags problems — it never rewrites doctrine, never alters image prompts autonomously, and never makes theological judgments. All flags are advisory: the human user makes the final decision.
+
+**Execution:**
+
+1. Read `lesson-source.json` to extract: `book`, `chapter`, `verse`, `lesson_title`, `key_points[]`, `target_age`.
+
+2. Read `<run_dir>/lesson-outline.json`. Find the scene entry where `index` matches the numeric part of `scene_label`. Extract `image_brief` and `scene_title`.
+
+3. Load the `CHECKLIST` constant from `skills/bible-class/lib/bible_review.js` via Bash to get the 4 check IDs and their descriptions:
+   ```bash
+   node -e "const { CHECKLIST } = require('./skills/bible-class/lib/bible_review'); console.log(JSON.stringify(CHECKLIST, null, 2));"
+   ```
+
+4. Build a review prompt for Claude (self-review, no Gemini call needed for theological content):
+
+   ```
+   ## Bible Illustration Review — {scene_label}
+
+   You are reviewing an AI-generated illustration for a Sunday school lesson for 3-5 year-olds.
+   Your ONLY job is to flag problems. Do NOT rewrite doctrine. Do NOT invent theological positions.
+   All flags are advisory — the teacher makes the final decision.
+
+   ### Scripture Source (authoritative)
+   {lesson-source.json content}
+
+   ### Scene Being Illustrated
+   Label: {scene_label}
+   Brief: {image_brief}
+
+   ### Image to Review
+   The image is at: {image_path}
+   [Note: If you can read the image, describe what you see. If you cannot, base your review
+   on whether the image_brief describes anything that would fail the checklist.]
+
+   ### Checklist
+   For each check, output exactly one flag line using this format:
+   [SEVERITY] scene:{scene_label} — {issue description}
+
+   Severity levels:
+   - CRITICAL: must fix before use (clear anachronism, wrong Bible character, disturbing content)
+   - MAJOR: should fix (historical inaccuracy, misleading symbolism, off-brief content)
+   - MINOR: consider fixing (minor inaccuracy, suboptimal but acceptable)
+   - OK: no issue found
+
+   Checks to perform:
+   {CHECKLIST items as numbered list with id, label, description}
+
+   Output ALL four checks, one line each. Then add a one-paragraph narrative summary.
+   ```
+
+5. Run the review prompt as a Claude sub-task or self-review (Bash + `claude` CLI if available, or direct self-reasoning). Write the output to `<run_dir>/bible-reviews/review-{scene_label_number}.md`.
+
+6. Parse the flags using `parseReviewFlags`:
+   ```bash
+   node -e "
+   const { parseReviewFlags } = require('./skills/bible-class/lib/bible_review');
+   const text = require('fs').readFileSync('<path_to_review>', 'utf8');
+   const flags = parseReviewFlags(text);
+   console.log(JSON.stringify(flags));
+   "
+   ```
+
+7. Determine result:
+   - If any `CRITICAL` flag: send `review_failed(mode=bible_review, severity=CRITICAL, flags=[...])`.
+   - If any `MAJOR` flag: send `review_failed(mode=bible_review, severity=MAJOR, flags=[...])`.
+   - If only `MINOR`/`OK`: send `review_passed(mode=bible_review, flags=[...])`.
+   - In all cases write the full review file (flags + narrative). The human decides whether to act on any flag.
+
+**Policy constraints (always enforced):**
+- Never rewrite a Bible verse, story, or theological assertion — only flag.
+- Never add theological content not in `lesson-source.json`.
+- Never suppress a flag because it "seems minor" — output all four checklist lines.
+- The `fix loop` from the `review` mode does NOT apply — bible_review never triggers an automatic regeneration. That is always a human decision made in `bible-image-core.md`.
+
+**Output file format (`<RD>/bible-reviews/review-{NN}.md`):**
+
+```markdown
+# Bible Review — {scene_label}
+
+**Reviewer**: review-core agent (mode=bible_review)
+**Scene**: {scene_label} — {scene_title}
+**Scripture**: {book} {chapter}:{verse}
+**Reviewed**: {timestamp}
+
+## Flags
+
+[CRITICAL|MAJOR|MINOR|OK] scene:{scene_label} — {issue or "No issue found"}
+... (one line per checklist item)
+
+## Narrative Summary
+
+{One paragraph discussing overall accuracy, specific concerns, and anything noteworthy.}
+```
+
+**Verification Steps for `mode=bible_review`:**
+- [ ] Review file written to `<RD>/bible-reviews/review-{NN}.md`.
+- [ ] File contains exactly one flag line per checklist item (4 lines).
+- [ ] Each flag line parses successfully with `parseReviewFlags`.
+- [ ] `review_passed` or `review_failed` signal sent with correct severity.
+- [ ] No theological content added beyond what is in `lesson-source.json`.
 
 ## Communication
 - Directed messages with `requires_ack=true` must be acknowledged.
