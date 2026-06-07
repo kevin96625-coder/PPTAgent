@@ -22,13 +22,15 @@ Handle content authoring: structured outline creation using Pyramid Principle an
 
 ## Inputs
 - `run_dir`
-- `mode`: `outline` | `revise` | `draft`
+- `mode`: `outline` | `revise` | `draft` | `lesson_outline` | `lesson_revise`
 - `feedback`: (revise mode only) user's modification instructions (e.g. "把第三部分移到前面", "remove slide 8", "add a comparison slide after slide 4")
 
 ## Outputs
 - `mode=outline`: `${run_dir}/outline.json` + `${run_dir}/outline-preview.md`
 - `mode=revise`: updated `${run_dir}/outline.json` + `${run_dir}/outline-preview.md`
 - `mode=draft`: `${run_dir}/drafts/slide-{nn}.svg` + `${run_dir}/draft-manifest.json`
+- `mode=lesson_outline`: `${run_dir}/lesson-outline.json` + `${run_dir}/lesson-outline.md` + `${run_dir}/craft.md`
+- `mode=lesson_revise`: updated `${run_dir}/lesson-outline.json` + `${run_dir}/lesson-outline.md` + `${run_dir}/craft.md`
 
 ## Execution
 1. Read `${run_dir}/input.md` for page range (`--pages`), style (`--style`), and other flags.
@@ -71,6 +73,62 @@ Handle content authoring: structured outline creation using Pyramid Principle an
      - Update `total_pages` to reflect the new count. Validate it still falls within the page range from `input.md`.
      - Regenerate `outline-preview.md` from the updated outline.
      - Send `outline_ready` to lead.
+   - `lesson_outline`:
+     - Read `${run_dir}/lesson-source.json`. This is the SOLE content source — all outline
+       content must derive from it. Do NOT introduce theological positions, extra Bible
+       passages, or doctrinal commentary beyond what is stated in lesson-source.json.
+     - Generate `lesson-outline.json` with the following exact structure:
+       - `title`: lesson title from lesson-source.json.
+       - `approved`: always set to `false` (the lead orchestrator sets it to `true` after
+         user approval).
+       - `scripture_ref`: from lesson-source.json.
+       - `teaching.duration_min`: 15.
+       - `teaching.scenes`: Array of 4-8 scene objects derived from `core_points` and
+         `raw_text`. Each scene:
+         - `index`: 1-based integer.
+         - `title`: short Chinese scene title (≤12 characters).
+         - `key_message`: the single theological truth for this scene, in one sentence,
+           derived ONLY from lesson-source.json.
+         - `narration`: 2-3 sentences of spoken narration in 3-5岁口语 (simple vocabulary,
+           concrete images, no abstract theology). Max 60 characters per sentence.
+         - `interaction`: one interactive question or action prompt for children.
+         - `image_brief`: a vivid illustration description for image generation (subject,
+           setting, mood, key visual elements; max 80 characters).
+       - `craft.duration_min`: 15.
+       - `craft.title`: short Chinese craft activity name.
+       - `craft.materials`: list of simple craft materials (paper, scissors, glue, etc.).
+       - `craft.steps`: numbered steps for the craft activity.
+       - `craft.relation_to_story`: one sentence connecting the craft to the Bible story.
+       - `memory_verse.text`: a short, age-appropriate Bible verse from lesson-source.json
+         scripture_ref or a verse cited in raw_text.
+       - `memory_verse.ref`: book/chapter:verse citation.
+     - Validate the generated JSON with `skills/bible-class/lib/lesson_schema.js`
+       `validateLessonOutline`. If validation fails, fix and re-validate before writing.
+     - Write `${run_dir}/lesson-outline.json`.
+     - Generate `${run_dir}/lesson-outline.md`: a human-readable markdown summary of the
+       outline. Format:
+       - Lesson title and scripture ref as heading.
+       - One section per scene (index, title, key_message, narration preview, image_brief).
+       - Craft section listing title, materials, and steps.
+       - Memory verse section.
+     - Generate `${run_dir}/craft.md` by calling `skills/bible-class/lib/craft_writer.js`
+       `renderCraftMarkdown(outlineObj)` on the finalized outline. Write the returned
+       string to `${run_dir}/craft.md`. craft.md is TEXT ONLY — it never becomes a slide.
+     - Send `lesson_outline_ready` to lead.
+
+   - `lesson_revise`:
+     - Read existing `${run_dir}/lesson-outline.json` as the baseline.
+     - Parse `feedback` from prompt args — this is the teacher's modification instruction.
+     - Apply incremental changes to the existing outline:
+       - Do NOT regenerate scenes that were not mentioned in the feedback.
+       - Do NOT introduce content not present in `lesson-source.json`.
+       - Re-index `teaching.scenes` sequentially after any add/remove operations.
+     - Re-validate with `validateLessonOutline` before writing.
+     - Write updated `${run_dir}/lesson-outline.json`.
+     - Regenerate `${run_dir}/lesson-outline.md` and `${run_dir}/craft.md` from the
+       updated outline.
+     - Send `lesson_outline_ready` to lead.
+
    - `draft`:
      - Read `${run_dir}/outline.json` for page structure.
      - Read the SVG generator prompt from `skills/_shared/references/prompts/svg-generator.md`.
