@@ -1,0 +1,11 @@
+{
+  "name": "ppt-shared",
+  "version": "0.1.0",
+  "description": "Shared workflow logic for the /ppt command (stop-at decision, etc.).",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "ISC"
+}
