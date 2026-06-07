@@ -1,0 +1,37 @@
+name: Disney 3D
+description: "Stylized modern Disney 3D animation aesthetic (Frozen/Encanto-like) — rounded cartoonish proportions, matte non-realistic skin, warm and appealing. More stylized and restrained than Pixar; chosen over photoreal 3D to keep a reverent, age-appropriate feel for bible scenes."
+default: false
+
+image_aspect: "4:3"
+
+identity_block_template: |
+  Character: {character_name}
+  Age appearance: {age_appearance}
+  Ethnicity/region: {ethnicity}
+  Hair: {hair_description}
+  Clothing: {clothing}
+  Color palette for this character: {palette}
+  Expression default: kind warm smile, large gentle eyes
+  Art style lock: stylized Disney-style 3D animation, rounded cartoonish proportions, matte non-realistic skin, NO subsurface scattering, NO photorealism
+  This character must look IDENTICAL across all scenes — same hair color/style, same clothing, same face proportions.
+
+style_block: |
+  Art style: stylized Disney-style 3D animation render (like Frozen / Encanto / Tangled), clearly cartoonish, not photorealistic
+  Character design: rounded simplified proportions, large warm expressive eyes, soft friendly faces
+  Skin: matte stylized shading — NO realistic subsurface scattering, NO visible skin pores, NO realistic texture
+  Colors: vibrant yet harmonious warm palette
+  Lighting: soft even stylized lighting, gentle warm fill — never harsh, never horror-adjacent, never dramatic realism
+  Background: simplified stylized 3D environment, gentle depth-of-field, uncluttered
+  Composition: medium shot or medium-close, subject centered, 3/4 angle preferred
+  Mood: reverent, warm, uplifting, child-friendly — safe and dignified for 3-5 year-olds
+  Render quality: clean stylized CG still, smooth antialiasing
+  Forbidden: photorealism, realistic skin pores or subsurface scattering, uncanny valley faces, dark horror lighting, modern objects, anachronistic items
+  Period setting: stylized 1st century Near East — robes, sandals, oil lamps, stylized desert/lake/village
+
+layout_tokens:
+  font_family: "'Baloo 2', 'Fredoka One', sans-serif"
+  heading_size: 46
+  body_size: 31
+  accent_color: "#4A90D9"
+  bg_color: "#EEF6FF"
+  card_radius: 18

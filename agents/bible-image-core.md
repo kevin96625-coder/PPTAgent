@@ -25,7 +25,7 @@ Orchestrate Phase 3 (style selection + master reference) and Phase 4 (per-scene 
 ## Inputs
 
 - `run_dir` — absolute path to the run directory (e.g. `openspec/changes/<run_id>`)
-- `preset` — style preset name: `flat-cartoon` (default) | `watercolor-storybook` | `pixar-3d` | `warm-handdrawn`
+- `preset` — style preset name: `flat-cartoon` (default) | `watercolor-storybook` | `disney-3d` | `warm-handdrawn`
 - `character_desc` — JSON object with keys: `character_name`, `age_appearance`, `ethnicity`, `hair_description`, `clothing`, `palette`
 
 ## Outputs
@@ -101,7 +101,7 @@ function parseArgs(argv) {
 
 function parseYamlBlock(text) {
   // Minimal multiline-block YAML reader for the 4 known fields.
-  // Handles `|` block scalars. Sufficient for the known flat-cartoon/watercolor/pixar/warm-handdrawn YAML structure.
+  // Handles `|` block scalars. Sufficient for the known flat-cartoon/watercolor/disney-3d/warm-handdrawn YAML structure.
   const result = {};
   const lines = text.split('\n');
   let currentKey = null;
