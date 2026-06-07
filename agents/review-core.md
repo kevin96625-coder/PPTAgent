@@ -151,7 +151,7 @@ For `mode=bible_review`:
    Output ALL four checks, one line each. Then add a one-paragraph narrative summary.
    ```
 
-5. Run the review prompt as a Claude sub-task or self-review (Bash + `claude` CLI if available, or direct self-reasoning). Write the output to `<run_dir>/bible-reviews/review-{scene_label_number}.md`.
+5. Run the review prompt as a Claude sub-task or self-review (Bash + `claude` CLI if available, or direct self-reasoning). Write the output to `<run_dir>/bible-reviews/review-{NN}.md`, where `NN` is the zero-padded 2-digit scene index (e.g. scene index `3` → `review-03.md`), matching `bible-image-core`'s `String(index).padStart(2, '0')`. (For the `master` label, use `review-master.md`.)
 
 6. Parse the flags using `parseReviewFlags`:
    ```bash
