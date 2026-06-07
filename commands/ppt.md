@@ -1,6 +1,6 @@
 ---
 description: "PPT slide generation workflow: init -> requirement research -> material collection -> outline planning -> planning draft -> design draft + Gemini review -> delivery"
-argument-hint: "[--style=<style>] [--brand-colors=<path>] [--pages=10-15] [--run-id=<id>] <topic>"
+argument-hint: "[--style=<style>] [--brand-colors=<path>] [--pages=10-15] [--run-id=<id>] [--stop-at=research|outline|draft|design|full] <topic>"
 allowed-tools:
   - Task
   - AskUserQuestion
@@ -45,7 +45,7 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
 
 ## Phase 1: Init
 
-1. Parse flags: `--style` (optional), `--pages` (default: `10-15`), `--run-id`.
+1. Parse flags: `--style` (optional), `--pages` (default: `10-15`), `--run-id`, `--stop-at` (optional, default `full`).
    Available styles are discovered from `skills/_shared/index.json` (filter resources where `domain == "style"`). Do NOT hardcode style names — read the registry.
 
    **Style selection** (if `--style` not provided, two-step flow):
@@ -113,6 +113,25 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
    - Mark items `[x]` as each phase completes.
 
 6. Write `${RUN_DIR}/input.md` with topic, style, page range, and flags.
+
+7. **Resolve the stop target** (`--stop-at`). The valid stages, in order, are
+   `research` (stops after Phase 3) · `outline` (Phase 4) · `draft` (Phase 5) ·
+   `design` (Phase 6) · `full` (Phase 7, default). Determine `COMPLETED_STAGE`
+   from the Resume detection above (`none` for a fresh run; otherwise the highest
+   fully-completed stage), then resolve the action:
+
+   ```bash
+   # APPROVED = "true" if outline.json exists with "approved": true, else "false"
+   node skills/_shared/scripts/stop-at-cli.js \
+     --stop-at "${STOP_AT:-full}" \
+     --completed "${COMPLETED_STAGE:-none}" \
+     --outline-approved "${APPROVED:-false}"
+   ```
+
+   The command prints a JSON decision `{ action, target, stopPhase, nextStage, message }`.
+   - `action == "already-done"` → print `message` (artifact locations / resume hint) and **STOP**. Do not run any phase.
+   - `action == "run"` → continue the workflow, but **stop after the phase named by `target`** (see the Stop-at checkpoints in Phases 3–6).
+   - If Node is unavailable, apply the same rules by hand: invalid value → error; `target` rank ≤ `COMPLETED_STAGE` rank → already-done; otherwise run up to and including `target`. Ranks: research<outline<draft<design<full.
 
 ## Phase 2: Requirement Research (Hard Stop)
 
