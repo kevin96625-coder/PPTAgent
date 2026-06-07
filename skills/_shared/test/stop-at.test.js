@@ -44,3 +44,53 @@ test('stageRank: none=0, research=1 ... full=5', () => {
 test('stageRank accepts uppercase NONE as the empty sentinel', () => {
   assert.strictEqual(stageRank('NONE'), 0);
 });
+
+const { NEXT_STAGE, resolveStopAction } = require('../scripts/lib/stop-at');
+
+test('NEXT_STAGE chains research→outline→…→full→null', () => {
+  assert.deepStrictEqual(NEXT_STAGE, {
+    research: 'outline', outline: 'draft', draft: 'design', design: 'full', full: null,
+  });
+});
+
+test('fresh run, stop-at=outline → run to outline (Phase 4)', () => {
+  const d = resolveStopAction({ stopAt: 'outline', completed: 'none' });
+  assert.strictEqual(d.action, 'run');
+  assert.strictEqual(d.target, 'outline');
+  assert.strictEqual(d.stopPhase, 4);
+  assert.strictEqual(d.nextStage, 'draft');
+});
+
+test('no stop-at defaults to full and runs', () => {
+  const d = resolveStopAction({ completed: 'none' });
+  assert.strictEqual(d.action, 'run');
+  assert.strictEqual(d.target, 'full');
+  assert.strictEqual(d.stopPhase, 7);
+});
+
+test('stop-at <= completed → already-done', () => {
+  const d = resolveStopAction({ stopAt: 'outline', completed: 'design' });
+  assert.strictEqual(d.action, 'already-done');
+  assert.match(d.message, /already complete/i);
+});
+
+test('stop-at == completed (equal rank) → already-done', () => {
+  const d = resolveStopAction({ stopAt: 'draft', completed: 'draft' });
+  assert.strictEqual(d.action, 'already-done');
+});
+
+test('stop-at > completed → run (continue from breakpoint)', () => {
+  const d = resolveStopAction({ stopAt: 'design', completed: 'outline' });
+  assert.strictEqual(d.action, 'run');
+  assert.strictEqual(d.stopPhase, 6);
+});
+
+test('outline already approved → hint to continue design via run-id', () => {
+  const d = resolveStopAction({ stopAt: 'outline', completed: 'outline', outlineApproved: true });
+  assert.strictEqual(d.action, 'already-done');
+  assert.match(d.message, /--run-id=<id> --stop-at=full/);
+});
+
+test('invalid stop-at bubbles up from resolveStopAction', () => {
+  assert.throws(() => resolveStopAction({ stopAt: 'nope', completed: 'none' }), /Invalid --stop-at/);
+});
