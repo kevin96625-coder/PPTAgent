@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { STAGES, STAGE_PHASE, parseStopAt, stageRank } = require('../scripts/lib/stop-at');
+const { STAGES, STAGE_PHASE, NEXT_STAGE, parseStopAt, stageRank, resolveStopAction } = require('../scripts/lib/stop-at');
 
 test('STAGES are ordered research<outline<draft<design<full', () => {
   assert.deepStrictEqual(STAGES, ['research', 'outline', 'draft', 'design', 'full']);
@@ -44,8 +44,6 @@ test('stageRank: none=0, research=1 ... full=5', () => {
 test('stageRank accepts uppercase NONE as the empty sentinel', () => {
   assert.strictEqual(stageRank('NONE'), 0);
 });
-
-const { NEXT_STAGE, resolveStopAction } = require('../scripts/lib/stop-at');
 
 test('NEXT_STAGE chains research→outline→…→full→null', () => {
   assert.deepStrictEqual(NEXT_STAGE, {

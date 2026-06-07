@@ -48,6 +48,8 @@ function resolveStopAction(opts = {}) {
 
   if (ti <= ci) {
     let message = `Stage "${target}" is already complete; its artifacts are available in the run directory.`;
+    // Intentional: an approved outline resumes straight to FULL delivery (not the next
+    // incremental stop NEXT_STAGE['outline']='draft') — the user has signed off, so run to completion.
     if (target === 'outline' && opts.outlineApproved) {
       message = `Outline already approved. Continue design with: /ppt-agent:ppt --run-id=<id> --stop-at=full`;
     }
