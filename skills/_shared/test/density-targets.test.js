@@ -27,3 +27,18 @@ test('reviewer.md per-type rows match density-targets.json values', () => {
     assert.match(REVIEWER, row, `reviewer.md row for ${t} should show ${min}-${max} matching the JSON`);
   }
 });
+
+test('reviewer.md per-type rows reflect max_key_points from density-targets.json', () => {
+  const lines = REVIEWER.split('\n');
+  for (const t of ['quote', 'image', 'content', 'data', 'comparison', 'process']) {
+    const [min, max] = targets[t].target_info_units;
+    // find the table row for this type (starts with | type | min-max |)
+    const row = lines.find((l) => new RegExp(`^\\|\\s*${t}\\s*\\|\\s*${min}-${max}\\b`).test(l));
+    assert.ok(row, `reviewer.md should have a row for ${t}`);
+    // the max_key_points value must appear somewhere in that row's text
+    assert.ok(
+      row.includes(String(targets[t].max_key_points)),
+      `reviewer.md ${t} row should reflect max_key_points ${targets[t].max_key_points}: "${row}"`
+    );
+  }
+});

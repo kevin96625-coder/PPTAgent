@@ -47,7 +47,7 @@ These are hard rules — violations are reported in the Hard Rule Violations sec
 | process | 3-5 | 3-5 steps | timeline, hero_grid |
 | timeline | 3-6 | 3-6 nodes | timeline |
 
-> 数值与 `skills/_shared/references/density-targets.json` 同步(planning_validator 的机器可读单一来源)。改这里的数值时必须同步改该 JSON;一致性由 `_shared/test/density-targets.test.js` 守护。
+> Numeric values are mirrored in `skills/_shared/references/density-targets.json` (the machine-readable single source for planning_validator). When changing these numbers, update that JSON too; consistency is guarded by `_shared/test/density-targets.test.js`.
 
 A slide exceeding its type's max info units by >2 is a Major issue. A cover/quote with >3 units is Critical.
 
