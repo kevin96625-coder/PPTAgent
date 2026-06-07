@@ -48,6 +48,7 @@ All agents are spawned via `Task()` calls. No Agent Team required — agents com
 - HTML preview template is in `skills/_shared/assets/preview-template.html`.
 - `outline.json` schema is defined in `skills/_shared/references/prompts/outline-architect.md` (single source of truth).
 - Optimization fallback policy is defined in `skills/gemini-cli/SKILL.md` (single source of truth). When Gemini is unavailable, the workflow degrades to technical validation only — hard-rule checks continue, but aesthetic optimization is not faked.
+
 ## HTML Preview Template
 
 The delivery phase generates an interactive `index.html` alongside the SVG files. The template uses 4 placeholders:
