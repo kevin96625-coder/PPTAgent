@@ -108,7 +108,9 @@ function composeStorybookHtml({ outline, imagesDir, slidesDir }) {
 
   // 2. Memory-verse slide (optional)
   if (outline.memory_verse && outline.memory_verse.text) {
-    const mvIndex = outline.teaching.scenes.length + 1;
+    // Use max scene index (not count) so the memory-verse slide never collides
+    // with a scene file even if scene indices are non-contiguous.
+    const mvIndex = Math.max(...outline.teaching.scenes.map((s) => s.index)) + 1;
     const mvPath = path.join(slidesDir, `slide-${pad2(mvIndex)}.html`);
     fs.writeFileSync(mvPath, renderSlideHtml({
       type: 'memory-verse',

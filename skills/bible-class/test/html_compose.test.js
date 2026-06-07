@@ -94,3 +94,23 @@ test('throws when outline.teaching.scenes is empty or missing', () => {
     /scenes/
   );
 });
+
+test('memory-verse slide uses max scene index + 1 (no collision with non-contiguous indices)', () => {
+  const dir = tmpRun();
+  // scenes indexed 1 and 4 (non-contiguous): memory verse must be slide-05, not slide-03
+  const outline = {
+    title: '测试', scripture_ref: 'X 1:1',
+    teaching: { scenes: [
+      { index: 1, title: 'A', narration: 'a', interaction: 'qa', image_brief: 'b1' },
+      { index: 4, title: 'B', narration: 'b', interaction: 'qb', image_brief: 'b2' },
+    ] },
+    memory_verse: { text: '金句', ref: 'X 1:2' },
+  };
+  composeStorybookHtml({ outline, imagesDir: path.join(dir, 'images'), slidesDir: path.join(dir, 'slides') });
+  const slidesDir = path.join(dir, 'slides');
+  // scene 4 file must survive and still hold scene B, memory verse goes to slide-05
+  assert.ok(fs.existsSync(path.join(slidesDir, 'slide-04.html')), 'scene-04 slide must exist');
+  assert.match(fs.readFileSync(path.join(slidesDir, 'slide-04.html'), 'utf8'), /data-slide-type="scene"/);
+  assert.ok(fs.existsSync(path.join(slidesDir, 'slide-05.html')), 'memory-verse must be slide-05');
+  assert.match(fs.readFileSync(path.join(slidesDir, 'slide-05.html'), 'utf8'), /data-slide-type="memory-verse"/);
+});
