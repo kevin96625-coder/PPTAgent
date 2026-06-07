@@ -45,7 +45,7 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
 
 ## Phase 1: Init
 
-1. Parse flags: `--style` (optional), `--pages` (default: `10-15`), `--run-id`, `--stop-at` (optional, default `full`). Store the `--stop-at` value as `STOP_AT` (default `full` when absent) for use in the stop-target resolution step below.
+1. Parse flags: `--style` (optional), `--pages` (default: `10-15`), `--run-id`, `--stop-at` (optional, default `full`). Store the `--stop-at` value as `STOP_AT` (default `full` when absent) for use in the stop-target resolution step below. Store the `--pages` value as `PAGES` (default `10-15` when absent) for use in the planning-validator gate.
    Available styles are discovered from `skills/_shared/index.json` (filter resources where `domain == "style"`). Do NOT hardcode style names — read the registry.
 
    **Style selection** (if `--style` not provided, two-step flow):
@@ -196,8 +196,9 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
      --pages "${PAGES}" > "${RUN_DIR}/planning-validation.json"
    ```
    读 `${RUN_DIR}/planning-validation.json` 的 `{ ok, hard_errors, warnings }`:
-   - **有 `hard_errors`(exit 1)**:不要把大纲交给用户。用 `Task(content-core, mode=revise, feedback=<hard_errors 摘要>)` 让其修复,再重跑本校验,直到 `ok:true`。
-   - **`ok:true` 且有 `warnings`**:继续到审批 Hard Stop,但**把 warnings 摘要并入下一步 AskUserQuestion 的说明**(密度超标/布局单调/visual_weight 节奏/缺 key_message 等),让用户知情决定是否让 content-core revise。
+       - **JSON 含顶层 `error` 字段(而非 `hard_errors`)**:说明校验器调用本身出错(如 outline.json 尚未写出/不可读),按"无 Node"同样降级处理——记录错误并继续(不要据此进入 revise 循环)。
+       - **有 `hard_errors`(exit 1)**:不要把大纲交给用户。用 `Task(content-core, mode=revise, feedback=<hard_errors 摘要>)` 让其修复,再重跑本校验。**最多 3 轮**;若 3 轮后仍有 `hard_errors`,停止自动修复,通过 `AskUserQuestion` 把剩余错误告知用户、等待人工决策(不要无限循环)。
+   - **`ok:true` 且有 `warnings`**:继续到审批 Hard Stop,但**把 warnings 摘要并入下一步 AskUserQuestion 的说明**(密度超标/布局单调/visual_weight 节奏/缺 key_message 等),让用户知情决定是否让 content-core revise。 按 `kind: 一句话` 列出每条 warning(最多 5 条,多则折叠),置于大纲预览之后、审批之前。
    - **无 Node 可用**:跳过本校验(优雅降级),在产物里注明"未做结构校验"。
 
 3. **MANDATORY**: MUST call `AskUserQuestion` to present the outline as "digital sticky notes" view.
