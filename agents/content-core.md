@@ -83,8 +83,12 @@ Handle content authoring: structured outline creation using Pyramid Principle an
          user approval).
        - `scripture_ref`: from lesson-source.json.
        - `teaching.duration_min`: 15.
-       - `teaching.scenes`: Array of 4-8 scene objects derived from `core_points` and
-         `raw_text`. Each scene:
+       - `teaching.scenes`: Array of scene objects derived from `core_points` and
+         `raw_text`, with the scene count driven by the Bible story's natural
+         narrative beats (typically 6-12; minimum 4 for a coherent arc; do NOT
+         truncate a content-rich story to hit a cap, and do NOT pad a simple story).
+         Each scene = one PPT page (cost is controlled later by the per-batch image
+         generation confirmation gate, not by capping scene count). Each scene:
          - `index`: 1-based integer.
          - `title`: short Chinese scene title (≤12 characters).
          - `key_message`: the single theological truth for this scene, in one sentence,
