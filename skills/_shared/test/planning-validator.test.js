@@ -101,8 +101,17 @@ test('soft density: data_elements push info_units over target max+2 -> major', (
   assert.ok(run(o).warnings.some((w) => w.kind === 'density' && w.severity === 'major'));
 });
 
-test('soft density: quote page with key_points -> critical', () => {
-  const o = clone(VALID); o.parts[0].pages[2].key_points = ['should be empty'];
+test('soft density: quote page with a 1-2 line accent -> no density warning (legitimate)', () => {
+  // dogfood fix: a cover tagline / quote line / image caption is intentional and must NOT
+  // be flagged. Only >3 units (genuine stuffing) is critical for these low-density types.
+  const o = clone(VALID); o.parts[0].pages[2].key_points = ['intentional tagline'];
+  const r = run(o);
+  assert.strictEqual(r.ok, true);
+  assert.ok(!r.warnings.some((w) => w.kind === 'density'), 'a single accent on a quote page must not raise a density warning');
+});
+
+test('soft density: quote page over its low-density budget (>3 units) -> critical', () => {
+  const o = clone(VALID); o.parts[0].pages[2].key_points = ['a', 'b', 'c', 'd'];
   assert.ok(run(o).warnings.some((w) => w.kind === 'density' && w.severity === 'critical'));
 });
 

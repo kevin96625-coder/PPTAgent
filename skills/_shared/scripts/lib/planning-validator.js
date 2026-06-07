@@ -109,12 +109,17 @@ function validateOutline(outline, opts = {}) {
       const t = targets[pg.type];
       const kp = pg.key_points.length;
       const units = kp + countDataElements(pg.data_elements);
-      if (kp > t.max_key_points) {
+      // Bullet-budget warn only applies to types with a positive key_points budget.
+      // quote/image have max_key_points 0 (their 1-2 info units are a quote/caption, not
+      // bullets) — a legitimate 1-2 line accent must NOT warn here; their overload is
+      // caught by the units>3 critical below instead.
+      if (t.max_key_points > 0 && kp > t.max_key_points) {
         W(id, 'density', 'warn', `${kp} key_points exceeds ${pg.type} max_key_points ${t.max_key_points}`);
       }
       const maxUnits = t.target_info_units[1];
-      if ((pg.type === 'quote' || pg.type === 'image') && (kp > 0 || units > 3)) {
-        W(id, 'density', 'critical', `${pg.type} page should be near-empty (info_units=${units}, key_points=${kp})`);
+      if ((pg.type === 'quote' || pg.type === 'image') && units > 3) {
+        // reviewer.md: a low-density page (quote/image) with >3 units is Critical.
+        W(id, 'density', 'critical', `${pg.type} page is over its low-density budget (info_units=${units}; ${pg.type} pages should stay within ~${maxUnits})`);
       } else if (units > maxUnits + 2) {
         W(id, 'density', 'major', `info_units ${units} exceeds ${pg.type} target max ${maxUnits} by >2`);
       }

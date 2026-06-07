@@ -72,8 +72,8 @@
 - **layout(软)**:页缺 `layout_type`(也接受历史字段名 `layout_hint`),或其值不在 10 选 snake_case 集合 → 警告。**不硬拒**(命名历史未统一)。
 - **visual_weight 缺失** → 警告(按 outline-architect"每页 MUST 有";缺则下游按 medium 处理)。
 - **密度(确定性,双重检查)** —— 只对 `parts[].pages[]`(cover/end_page 无 key_points,跳过)。质量优先:单数 key_points 会漏掉"数据密集页"的过载(data 页常 key_points 少但 data_elements 多),故同时查两个预算:
-  1. `len(key_points)` 对照该页型 `max_key_points`,超出 → `warn`。
-  2. 估算 `info_units = len(key_points) + count(data_elements)` 对照该页型 `target_info_units`:超 `max+2` → `major`;`quote`/`image` 页出现任何 `key_points`,或 `info_units>3` → `critical`(对应 reviewer.md "exceeds type max by >2 = Major;quote/image 等低密页超限 = Critical")。
+  1. `len(key_points)` 对照该页型 `max_key_points`,超出 → `warn`。**仅当 `max_key_points>0`**(content/data/comparison/process)才查——quote/image 的预算是 0,其 1–2 行点睛(tagline/quote/caption)是合法的,不在此报警(dogfood 实跑修正:原先对 quote/image 任何 key_points 报 critical,误伤了封面/收尾的点睛文案)。
+  2. 估算 `info_units = len(key_points) + count(data_elements)` 对照该页型 `target_info_units`:超 `max+2` → `major`;`quote`/`image` 页 `info_units>3` → `critical`(对应 reviewer.md "exceeds type max by >2 = Major;低密页 >3 units = Critical")。真过载(如 quote 塞 5 条)仍被 critical 抓住;合法的 1–2 行点睛不报警。
   - `count(data_elements)` 判定规则(确定性):数组→长度;数字→该值;缺失/null→0;其他对象→其顶层条目数。两个检查都是计数,无模糊估算。
 - **布局多样性**:连续 >3 页相同 `layout_type` → 警告(对应 reviewer.md 单调性规则)。
 - **visual_weight 节奏**:连续 >3 页 `high` → 警告(对应 FUSION 密度交替节奏)。
