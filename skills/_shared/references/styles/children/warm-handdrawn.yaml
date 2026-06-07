@@ -1,0 +1,37 @@
+name: Warm Handdrawn
+description: "Crayon and thick-marker hand-drawn storybook style — wobbly lines, textured fills, energetic and playful. Best for active or joyful scenes."
+default: false
+
+image_aspect: "4:3"
+
+identity_block_template: |
+  Character: {character_name}
+  Age appearance: {age_appearance}
+  Ethnicity/region: {ethnicity}
+  Hair: {hair_description}
+  Clothing: {clothing}
+  Color palette for this character: {palette}
+  Expression default: big joyful smile
+  Art style lock: hand-drawn crayon marker style, wobbly outlines, no photorealism, no flat digital vector fills
+  This character must look IDENTICAL across all scenes — same hair, same clothing colors, same face proportions.
+
+style_block: |
+  Art style: hand-drawn children's book illustration with crayon and thick marker texture
+  Line work: chunky wobbly outlines as if drawn by a careful adult with a marker, slightly imperfect
+  Colors: warm saturated crayon palette — red, yellow, blue, green, orange — with visible texture grain
+  Shading: cross-hatch or layered crayon strokes, no photorealistic gradients
+  Faces: simple round features, big dot eyes, wide mouth smile — instantly friendly
+  Background: hand-drawn landscape or interior, loose detail, energetic marks
+  Composition: slightly tilted or informal framing, lively and playful
+  Lighting: implied by warm color temperature, no realistic shadows
+  Mood: joyful, active, playful — safe and engaging for 3-5 year-olds
+  Forbidden: photorealism, digital-clean lines, dark shadows, modern objects, anachronistic items
+  Period setting: 1st century Near East — robes, sandals, oil lamps, desert/lake/village drawn in hand-drawn style
+
+layout_tokens:
+  font_family: "'Schoolbell', 'Caveat', cursive"
+  heading_size: 46
+  body_size: 31
+  accent_color: "#E8534A"
+  bg_color: "#FFFAE8"
+  card_radius: 14

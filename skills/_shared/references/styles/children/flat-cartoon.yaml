@@ -1,0 +1,36 @@
+name: Flat Cartoon
+description: "Flat rounded cartoon, inspired by The Beginner's Bible. Bright cheerful colors, bold outlines, exaggerated friendly expressions. Best default for 3-5 year-olds — theologically easiest to keep restrained."
+default: true
+
+image_aspect: "4:3"
+
+identity_block_template: |
+  Character: {character_name}
+  Age appearance: {age_appearance}
+  Ethnicity/region: {ethnicity}
+  Hair: {hair_description}
+  Clothing: {clothing}
+  Color palette for this character: {palette}
+  Expression default: warm gentle smile
+  Art style lock: flat rounded cartoon, bold black outlines, no photorealism, no gradients on faces
+  This character must look IDENTICAL across all scenes — same hair, same clothing colors, same face proportions.
+
+style_block: |
+  Art style: flat rounded 2D cartoon illustration
+  Line work: bold black outlines, uniform stroke weight ~3px
+  Colors: bright saturated palette, flat fills, minimal shading, no photorealistic lighting
+  Faces: large expressive eyes, simple nose, warm smile — friendly, never scary
+  Background: simple flat-color or minimal gradient, single focal element
+  Composition: centered subject, ample negative space, no clutter
+  Lighting: even ambient light, no dramatic shadows
+  Mood: joyful, safe, age-appropriate for 3-5 year-olds
+  Forbidden: photorealism, dark shadows, horror elements, modern objects, anachronistic items
+  Period setting: 1st century Near East — robes, sandals, oil lamps, desert/lake landscapes
+
+layout_tokens:
+  font_family: "'Nunito', 'Comic Neue', sans-serif"
+  heading_size: 48
+  body_size: 32
+  accent_color: "#F5A623"
+  bg_color: "#FFF8E7"
+  card_radius: 20
