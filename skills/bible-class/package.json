@@ -1,0 +1,11 @@
+{
+  "name": "bible-class",
+  "version": "0.1.0",
+  "description": "Schema validation and craft-markdown rendering for the /bible-class Sunday-school lesson workflow.",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "ISC"
+}
