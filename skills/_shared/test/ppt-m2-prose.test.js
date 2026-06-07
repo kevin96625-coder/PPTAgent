@@ -38,3 +38,17 @@ test('review-core derives page type for cover/end pages (no index match)', () =>
   assert.match(REVIEW_CORE, /slide_index == 1|cover/i);
   assert.match(REVIEW_CORE, /end_page\.type|total_pages/);
 });
+
+const OUTLINE_ARCH = read('../references/prompts/outline-architect.md');
+
+test('outline-architect JSON example uses layout_type (10-set) and data_elements, not stale layout_hint', () => {
+  assert.match(OUTLINE_ARCH, /"layout_type"/);
+  assert.match(OUTLINE_ARCH, /"data_elements"/);
+  assert.doesNotMatch(OUTLINE_ARCH, /"layout_hint"/);
+});
+
+test('outline-architect embeds the three methodology principles', () => {
+  assert.match(OUTLINE_ARCH, /从问题开始|问题出发/);
+  assert.match(OUTLINE_ARCH, /内容先行/);
+  assert.match(OUTLINE_ARCH, /每.*(节|part).*(论点|说明什么|takeaway|key_message)/);
+});
