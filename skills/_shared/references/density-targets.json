@@ -1,0 +1,9 @@
+{
+  "_note": "Single machine-readable source for per-page-type density budgets. Values are verbatim from gemini-cli/references/roles/reviewer.md 'Content Density Targets by Page Type'. comparison/process max_key_points take the integer upper bound of the prose range (comparison 2-3 -> 3, process 3-5 steps -> 5). cover/timeline rows from reviewer.md are NOT here: cover is a structural object (no key_points), timeline is a layout not a page type.",
+  "quote": { "target_info_units": [1, 2], "max_key_points": 0 },
+  "image": { "target_info_units": [1, 2], "max_key_points": 0 },
+  "content": { "target_info_units": [3, 5], "max_key_points": 3 },
+  "data": { "target_info_units": [4, 7], "max_key_points": 2 },
+  "comparison": { "target_info_units": [4, 6], "max_key_points": 3 },
+  "process": { "target_info_units": [3, 5], "max_key_points": 5 }
+}
