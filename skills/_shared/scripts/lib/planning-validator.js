@@ -21,7 +21,10 @@ function countDataElements(de) {
 function collectPages(outline) {
   const pages = [];
   for (const part of (outline.parts || [])) {
-    for (const pg of (part.pages || [])) pages.push(pg);
+    if (!part || typeof part !== 'object') continue;
+    for (const pg of (part.pages || [])) {
+      if (pg && typeof pg === 'object') pages.push(pg);
+    }
   }
   return pages;
 }
@@ -70,6 +73,14 @@ function validateOutline(outline, opts = {}) {
   }
 
   const pages = collectPages(o);
+
+  // Malformed (non-object) parts/pages are a hard error (not just silently skipped).
+  (o.parts || []).forEach((part, i) => {
+    if (!part || typeof part !== 'object') { E(null, `parts[${i}]`, `part ${i + 1} is not an object`); return; }
+    (part.pages || []).forEach((pg, j) => {
+      if (!pg || typeof pg !== 'object') E(null, `parts[${i}].pages[${j}]`, `page ${j + 1} in part ${i + 1} is not an object`);
+    });
+  });
 
   pages.forEach((pg, i) => {
     const id = pg.index != null ? pg.index : `#${i + 1}`;
@@ -130,6 +141,7 @@ function validateOutline(outline, opts = {}) {
     (val, span) => { if (val === 'high') W(null, 'visual_weight_rhythm', 'warn', `pages ${span} all visual_weight high (>3 consecutive)`); });
 
   (o.parts || []).forEach((part, i) => {
+    if (!part || typeof part !== 'object') return;
     if (!part.key_message || !String(part.key_message).trim()) {
       W(null, 'key_message', 'warn', `part ${i + 1} ("${part.title || ''}") has no key_message`);
     }
@@ -138,7 +150,7 @@ function validateOutline(outline, opts = {}) {
   return finalize();
 
   function finalize() {
-    const pageCount = (o.parts || []).reduce((n, p) => n + ((p.pages || []).length), 0);
+    const pageCount = (o.parts || []).reduce((n, p) => n + (p && typeof p === 'object' ? (p.pages || []).length : 0), 0);
     return {
       ok: hard.length === 0,
       hard_errors: hard,

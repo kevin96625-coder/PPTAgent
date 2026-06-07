@@ -125,3 +125,19 @@ test('soft: part missing key_message -> warn', () => {
   assert.strictEqual(r.ok, true);
   assert.ok(r.warnings.some((w) => w.kind === 'key_message'));
 });
+
+test('robust: null page element -> hard error, no throw', () => {
+  const o = clone(VALID); o.parts[0].pages.push(null); o.total_pages = 3;
+  let r;
+  assert.doesNotThrow(() => { r = run(o); });
+  assert.strictEqual(r.ok, false);
+  assert.ok(r.hard_errors.some((e) => /pages\[3\]/.test(e.field) || /not an object/.test(e.msg)));
+});
+
+test('robust: null part element -> hard error, no throw', () => {
+  const o = clone(VALID); o.parts.push(null);
+  let r;
+  assert.doesNotThrow(() => { r = run(o); });
+  assert.strictEqual(r.ok, false);
+  assert.ok(r.hard_errors.some((e) => /parts\[1\]/.test(e.field) || /not an object/.test(e.msg)));
+});
