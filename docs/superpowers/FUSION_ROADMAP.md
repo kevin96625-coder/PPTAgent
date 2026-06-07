@@ -27,7 +27,7 @@
 | P0 | 基线 + 源核实 | ✅ 完成 | 实测基线、核实 Akxan、修 Gemini bug | — |
 | M1 | `--stop-at` 灵活性 | ✅ 完成 | 分阶段停止 + 复用 --run-id 恢复 | P0 |
 | **M2** | **质量门控** | ✅ 代码完成 + 真实 dogfood 验证 | planning_validator + reviewer 页型上下文 + 方法论嵌入 | P0 |
-| **M2.5** | **🔴 slide-core 硬化 + 生成即自修(质量+效率)** | ⚪ **下一个(优先于 P3)** | 生成后确定性自修(安全区/14px/对比度)+ SVG 层密度防线 + review 效率 | M2(dogfood 实测驱动) |
+| **M2.5** | **🔴🔴 生成与视觉质量(战略 brainstorm 先行)** | ⚪ **下一个(优先于 P3)** | 真实图片 vs 禁假插画 · 谁出 SVG(Gemini?)· HTML 产物线 · 审查补"资产/内容贴切"维度;含 slide-core 机械硬化(安全区/14px/对比度自修) | M2(dogfood 实测:产物不可用 + 审查虚假高分) |
 | P3 | 排版 + 配色 | ⚪ 待办 | 7 级字号阶梯 + 60/30/10 配色校验(14px floor 被 M2.5 覆盖) | M2.5 |
 | P4 | 资源注入 | ⚪ 待办 | Akxan 资源库 + Node assembler 按需注入 | M2;Akxan(已核实) |
 | P5 | PPTX 导出 | ⚪ 待办 | 方案 D MVP + 统一 ppt/export + 复用 storybook | bible-class Plan4 更佳 |
@@ -36,11 +36,15 @@
 
 **当前推荐顺序**:M2 ✅ → **M2.5 slide-core 硬化(下一个,实测驱动)** → P3 → P5(方案D MVP)→ P4 → P6 → P7。(B/F 收尾切片可选,插在任意处。)
 
-### 🔴 M2.5 — slide-core 硬化 + 生成即自修(下一个里程碑,dogfood 实测驱动)
-**动因**:真实 12 页跑实测——5/12 页首审失败,原因集中在 slide-core 生成时的**确定性硬违规**(标题顶破 60px 安全区[01/02/04/06/07]、13px 字[03/05/07/09]、SVG 阶段加超密度[03/04/06/07]、对比度[06]),slide-core 现有"生成后校验"**只报不修** → 漏到 Gemini 触发昂贵 fix loop(整套 1h53m)。
-**范围**(brainstorm 细化):① 生成后**确定性自修**(安全区钳位、字号抬到 14、对比度修正)送 Gemini 前清掉硬违规;② SVG/draft 层补密度防线(planning_validator 只管大纲);③ review-core 效率(截断/重审、`node` 替 `npx tsx` 冷启动、瘦身 prompt)。
-**目标**(对今晚基线):首轮通过率 58%→≥85%、平均修复轮次 0.8→≤0.3、wall-clock 大降。
-**详见**:`docs/superpowers/2026-06-07-dogfood-findings-and-next-steps.md`。
+### 🔴🔴 M2.5 — 生成与视觉质量(下一个里程碑,战略 brainstorm 先行)
+**动因(看渲染产物后,头号)**:真实 12 页跑出的 deck **质量差、无法使用**(第 3 页是手绘通用轿跑剪影,与 SU7 无关;全 deck 零真实图;Gemini 却给 8.2/全过 = **审查盲区造成虚假信心**)。**这比机械违规更根本——机械硬化不会让丑/错的插画变好。**
+**战略取舍(brainstorm,结合原帖 + 两项目优点)**:
+- 真实图片(image-gen/P6)接产品/封面页 vs 禁止 slide-core 画假产品插画(改抽象/图标化);
+- 谁出 SVG:Claude 手绘 Bento vs 原帖式 **Gemini 出整页 SVG**;
+- 要不要 HTML 产物线(原帖"非编辑用 HTML 更丰富" + workflow-san HTML→PPTX 真保真);
+- reviewer 补"资产质量/内容贴切/专业度"维度 or 更早人工预览门。
+**含(次级)机械硬化**:slide-core 生成后**确定性自修**——安全区钳位(标题基线≥~92)、字号 <14 抬到 14、对比度修正;SVG 层补密度防线;review-core 效率(截断/重审、`node` 替 `npx tsx`、瘦身 prompt)。机械目标:首轮通过率 58%→≥85%、修复轮次 0.8→≤0.3。
+**🔴 明天入口/详见**:`docs/superpowers/2026-06-07-dogfood-findings-and-next-steps.md`。
 
 ---
 
