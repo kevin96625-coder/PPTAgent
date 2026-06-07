@@ -45,7 +45,7 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
 
 ## Phase 1: Init
 
-1. Parse flags: `--style` (optional), `--pages` (default: `10-15`), `--run-id`, `--stop-at` (optional, default `full`).
+1. Parse flags: `--style` (optional), `--pages` (default: `10-15`), `--run-id`, `--stop-at` (optional, default `full`). Store the `--stop-at` value as `STOP_AT` (default `full` when absent) for use in the stop-target resolution step below.
    Available styles are discovered from `skills/_shared/index.json` (filter resources where `domain == "style"`). Do NOT hardcode style names — read the registry.
 
    **Style selection** (if `--style` not provided, two-step flow):
@@ -120,6 +120,16 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
    from the Resume detection above (`none` for a fresh run; otherwise the highest
    fully-completed stage), then resolve the action:
 
+   Map the resume point (from the Resume detection in item 4) to `COMPLETED_STAGE`:
+
+   | Resume condition | `COMPLETED_STAGE` |
+   |------------------|-------------------|
+   | valid `slide-status.json`, or `draft-manifest.json` present (resume Phase 6) | `draft` |
+   | `outline.json` with `"approved": true`, no `draft-manifest.json` (resume Phase 5) | `outline` |
+   | `materials.md` present but outline not approved/missing (resume Phase 4) | `research` |
+   | only `requirements.md` or `research-context.md` (resume Phase 2–3) | `none` |
+   | nothing / fresh run | `none` |
+
    ```bash
    # APPROVED = "true" if outline.json exists with "approved": true, else "false"
    node skills/_shared/scripts/stop-at-cli.js \
@@ -129,7 +139,7 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
    ```
 
    The command prints a JSON decision `{ action, target, stopPhase, nextStage, message }`.
-   - `action == "already-done"` → print `message` (artifact locations / resume hint) and **STOP**. Do not run any phase.
+   - `action == "already-done"` → print `message` (resume hint) and **STOP**. Do not run any phase.
    - `action == "run"` → continue the workflow, but **stop after the phase named by `target`** (see the Stop-at checkpoints in Phases 3–6).
    - If Node is unavailable, apply the same rules by hand: invalid value → error; `target` rank ≤ `COMPLETED_STAGE` rank → already-done; otherwise run up to and including `target`. Ranks: research<outline<draft<design<full.
 
