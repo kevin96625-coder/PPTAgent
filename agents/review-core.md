@@ -45,7 +45,12 @@ Only proceed to LLM review if no Critical automated checks fail.
 ## Execution
 1. Read the full SVG source from `${run_dir}/slides/slide-{slide_index}.svg`.
 2. Read the active style YAML (e.g. `skills/_shared/references/styles/${style}.yaml`) to extract style tokens (colors, fonts, border-radius, gap).
-3. Read `${run_dir}/outline.json` to get the slide's title and context. Find the slide entry whose `index` matches `slide_index`. Extract `title`, `type`, and `visual_weight`. If `visual_weight` is absent (legacy outlines), infer from `type`: `quote`/`image` → `low`, `content`/`process` → `medium`, `data`/`comparison` → `high`. (Cover slides use `type: cover`; end/closing slides use their declared `type`.) Purpose: pass `type` and `visual_weight` into the Gemini prompt so the reviewer's per-type density targets engage deterministically — preventing low-density pages (cover/quote/image) from being penalized as content pages.
+3. Read `${run_dir}/outline.json` to determine `SLIDE_TITLE`, `PAGE_TYPE`, and `VISUAL_WEIGHT` for this slide. Use the following lookup order:
+   - If a `parts[].pages[]` entry has `index == slide_index`: use its `title` as `SLIDE_TITLE`, its `type` as `PAGE_TYPE`, and its `visual_weight` as `VISUAL_WEIGHT`.
+   - Else if `slide_index == 1`: this is the cover — `SLIDE_TITLE = outline.json cover.title` (or presentation title), `PAGE_TYPE = "cover"`, `VISUAL_WEIGHT = "low"` (the `cover` object has no `index` or `type` field).
+   - Else if `slide_index` equals the last slide (`total_pages`): this is the closing page — `SLIDE_TITLE = end_page.title` (or similar), `PAGE_TYPE = end_page.type`, `VISUAL_WEIGHT = "low"`.
+   - If `visual_weight` is absent on a matched content page (legacy outlines): infer from `type` — `quote`/`image` → `low`, `data`/`comparison` → `high`, all other types (incl. `content`/`process`/`timeline`/unknown) → `medium`.
+   Purpose: pass `PAGE_TYPE` and `VISUAL_WEIGHT` into the Gemini prompt so the reviewer's per-type density targets engage deterministically — preventing low-density pages (cover/quote/image) from being penalized as content pages.
 4. Send `heartbeat` when starting.
 5. Build a review prompt that includes:
    - The **full SVG source code** (MUST be included — reviewing by filename alone is forbidden per `gemini-cli/SKILL.md` constraints)

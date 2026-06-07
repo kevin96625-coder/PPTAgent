@@ -33,3 +33,8 @@ test('review-core mode=review passes the slide type into the Gemini prompt', () 
   assert.match(REVIEW_CORE, /##\s*Slide Context[\s\S]*?Page type:/);
   assert.match(REVIEW_CORE, /##\s*Slide Context[\s\S]*?Visual weight:/);
 });
+
+test('review-core derives page type for cover/end pages (no index match)', () => {
+  assert.match(REVIEW_CORE, /slide_index == 1|cover/i);
+  assert.match(REVIEW_CORE, /end_page\.type|total_pages/);
+});
