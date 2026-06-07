@@ -64,7 +64,10 @@
 - `index` 从 1 连续无缺无重;`total_pages` == 实际页数 且落在 `input.md` 的 `--pages` 区间。
 
 **软警告(不阻塞;在 Phase 4 Hard Stop 的 AskUserQuestion 里**一并呈现给用户**,由用户决定改不改)**:
-- **密度(确定性)**:每页 `len(key_points)` 对照 density-targets 的 `max_key_points`。超出即警告;若 `len(key_points)` 超 `target_info_units.max + 2` → 标 `major`;cover/quote `key_points>0` 或单元>3 → 标 `critical`(对应 reviewer.md 规则)。用**显式 key_points 计数**,不做模糊"信息单元"估算。
+- **密度(确定性,双重检查)**:质量优先——单数 key_points 会漏掉"数据密集页"的过载(data 页常 key_points 少但 data_elements 多),故同时查两个预算:
+  1. `len(key_points)` 对照 `max_key_points`,超出 → `warn`。
+  2. 估算 `info_units = len(key_points) + count(data_elements)` 对照 `target_info_units`:超 `max+2` → `major`;cover/quote 出现任何 `key_points` 或 `info_units>3` → `critical`(对应 reviewer.md "exceeds type max by >2 = Major;cover/quote >3 = Critical")。
+  - `count(data_elements)` 判定规则(确定性):数组→长度;数字→该值;缺失/null→0;其他对象→其顶层条目数。两个检查都是计数,无模糊估算。
 - **布局多样性**:连续 >3 页相同 `layout_type` → 警告(对应 reviewer.md 单调性规则)。
 - **visual_weight 节奏**:连续 >3 页 `high` → 警告(对应 FUSION 密度交替节奏)。
 - **part-level key_message 缺失** → 警告(M2 方法论要求每节有明确论点)。
@@ -175,6 +178,6 @@ node skills/_shared/scripts/planning-validator-cli.js \
 
 ## 9. 自审(本 spec)
 - 占位符:无 TBD;density 数值逐字来自 reviewer.md。
-- 一致性:页型 enum 在 C/E/density-targets 三处一致;`key_points` 计数是 C 密度检查的确定性依据(非模糊估算)。
+- 一致性:页型 enum 在 C/E/density-targets 三处一致;C 密度检查是确定性计数(`key_points` 数 + `data_elements` 数,非模糊估算)。
 - 范围:聚焦 E+C+D+Task1;B/F/P3 明确划出。
-- 歧义:density 软警告阈值明确(超 max_key_points→warn;超 target max+2→major;cover/quote 特例→critical);comparison/process 口语上限取整规则已注明。
+- 歧义:density 双重检查阈值明确(`len(key_points)>max_key_points`→warn;`len(key_points)+count(data_elements)>target max+2`→major;cover/quote 特例→critical);`count(data_elements)` 取数规则与 comparison/process 口语上限取整规则均已注明。
