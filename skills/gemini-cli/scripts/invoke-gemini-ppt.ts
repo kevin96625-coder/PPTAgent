@@ -73,7 +73,11 @@ function tryGemini(
   image: string,
   model: string,
 ): { success: boolean; stdout: string; stderr: string } {
-  const args = ["-p", finalPrompt, "--approval-mode", "plan", "-o", "text"];
+  // --skip-trust: this script always runs headless/non-interactively. gemini CLI
+  // (>=0.42) refuses to run in an untrusted directory unless trust is granted,
+  // which would silently fail every review on machines where the project folder
+  // is not pre-trusted. --skip-trust is the documented headless escape hatch.
+  const args = ["-p", finalPrompt, "--approval-mode", "plan", "-o", "text", "--skip-trust"];
   if (image) args.push("-i", image);
   if (model) args.push("--model", model);
 
