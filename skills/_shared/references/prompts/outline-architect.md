@@ -55,7 +55,7 @@ Generate a JSON structure wrapped in `[PPT_OUTLINE]` markers:
           "key_points": ["Point 1", "Point 2", "Point 3"],
           "layout_type": "single_focus|two_column_symmetric|two_column_asymmetric|three_column|hero_grid|mixed_grid|timeline|dashboard|horizontal_split|full_bleed",
           "data_elements": [
-            { "type": "metric", "label": "Revenue", "value": "$2.4B", "delta": "+18%" },
+            { "type": "metric", "label": "Revenue", "value": "$2.4B", "unit": "", "delta": "+18%" },
             { "type": "chart", "chart_type": "bar", "data_points": [] }
           ],
           "visual_weight": "low|medium|high",
@@ -78,7 +78,7 @@ Generate a JSON structure wrapped in `[PPT_OUTLINE]` markers:
 [/PPT_OUTLINE]
 ```
 
-## 方法论(内容先行)
+## 内容先行原则 (Content-First Principles)
 
 生成大纲前与生成中,遵循三条:
 1. **从问题开始,不从模板开始** —— 先明确"这套 PPT 要回答的核心问题是什么",据此排页,而非套固定结构。
@@ -98,7 +98,7 @@ The `notes` field should contain structured speaker guidance, not just "addition
 The `visual_weight` field captures the intended perceptual emphasis of a slide so downstream generators and holistic review can manage deck rhythm intentionally.
 
 - New outlines MUST emit `visual_weight` for every page.
-- Legacy `outline.json` files that omit `visual_weight` should have it inferred from page `type` by downstream consumers (quote/image → low, data/comparison → high, all other types incl. content/process/timeline → medium), rather than failing resume or review.
+- Legacy `outline.json` files that omit `visual_weight` should have it inferred from page `type` by downstream consumers (quote/image → low, data/comparison → high, all other page types (content/process/etc.) → medium), rather than failing resume or review.
 - `visual_weight` describes visual emphasis, not business priority.
 
 | Visual Weight | Use When | Typical Signals |
