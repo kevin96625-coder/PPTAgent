@@ -22,3 +22,17 @@ test('item 7 enumerates all five stop-at stages', () => {
     assert.match(item7, new RegExp(`\\b${s}\\b`), `item 7 should mention stage ${s}`);
   }
 });
+
+test('each of Phases 3-6 has a stop-at checkpoint', () => {
+  const checkpoints = PPT.match(/Stop-at checkpoint/g) || [];
+  assert.ok(checkpoints.length >= 4, `expected >=4 stop-at checkpoints, found ${checkpoints.length}`);
+});
+
+test('early delivery writes output/README.md with a resume command', () => {
+  assert.match(PPT, /output\/README\.md/);
+  assert.match(PPT, /--run-id=\$\{CHANGE_ID\}/);
+});
+
+test('early-delivery README block documents per-stage artifacts', () => {
+  assert.match(PPT, /Early-delivery README/);
+});

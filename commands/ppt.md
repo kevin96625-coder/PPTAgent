@@ -175,6 +175,7 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
    ```
 3. **Lead serially merges** all per-topic files into `${RUN_DIR}/materials.md` after all agents complete.
    This avoids parallel append conflicts on a shared file.
+4. **Stop-at checkpoint (research)**: if `target == "research"`, run "Stop-at: Early delivery (shared)" with `target=research`, then STOP.
 
 ## Phase 4: Outline Planning (Hard Stop)
 
@@ -196,6 +197,7 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
    Task(subagent_type="ppt-agent:content-core", prompt="run_dir=${RUN_DIR} mode=revise feedback=${USER_FEEDBACK}")
    ```
    content-core applies incremental changes to the existing `outline.json` (reorder, add, remove, modify) instead of regenerating from scratch. Then re-present the updated outline to the user for approval. Repeat until user approves.
+5. **Stop-at checkpoint (outline)**: if `target == "outline"`, run "Stop-at: Early delivery (shared)" with `target=outline`, then STOP.
 
 ## Phase 5: Planning Draft (策划稿)
 
@@ -206,6 +208,7 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
    Generates simple SVG pages: `${RUN_DIR}/drafts/slide-{nn}.svg`.
    Outputs `${RUN_DIR}/draft-manifest.json`.
    content-core sends `draft_slides_ready(indices=[N,N+1,N+2])` in batches of 3 as drafts complete, enabling Phase 6 pipeline overlap while conserving turn budget.
+2. **Stop-at checkpoint (draft)**: if `target == "draft"`, run "Stop-at: Early delivery (shared)" with `target=draft`, then STOP.
 
 ## Phase 6: Design Draft (设计稿) + Gemini Review
 
@@ -339,6 +342,41 @@ For each slide (or in batches):
    }
    ```
    This manifest serves as the quality gate record between Phase 6 and Phase 7. Phase 7 reads it to determine which slides to deliver and to generate the quality summary.
+6. **Stop-at checkpoint (design)**: if `target == "design"`, run "Stop-at: Early delivery (shared)" with `target=design`, then STOP. (`full` falls through into Phase 7 unchanged.)
+
+## Stop-at: Early delivery (shared)
+
+When a Stop-at checkpoint fires (`action == "run"` and the current phase == `target`),
+deliver the partial result and STOP — do **not** continue to the next phase:
+
+1. `mkdir -p "${RUN_DIR}/output"`
+2. Copy this stage's artifacts into `output/` (per the **Early-delivery README** table below).
+3. Write `${RUN_DIR}/output/README.md` using this template (substitute the bracketed values):
+
+   ```markdown
+   # [presentation title] — partial output (stopped at: [target])
+
+   This run stopped at **[target]** (Phase [stopPhase]). Artifacts produced:
+   [bullet list of the files copied into output/]
+
+   ## Continue
+   Run to completion:
+       /ppt-agent:ppt --run-id=${CHANGE_ID} --stop-at=full
+   Or stop at the next stage ([nextStage]):
+       /ppt-agent:ppt --run-id=${CHANGE_ID} --stop-at=[nextStage]
+   ```
+   (Omit the "next stage" line when `nextStage` is empty, i.e. for `design`→`full`.)
+
+4. Print `output/README.md`'s resume command to the user and STOP.
+
+**Early-delivery README — per-stage artifacts** (what to copy into `output/`):
+
+| target | copy into output/ |
+|--------|-------------------|
+| `research` | `research-context.md`, `requirements.md`, `materials.md` |
+| `outline` | `outline.json`, `outline-preview.md` |
+| `draft` | `drafts/*.svg`, `draft-manifest.json` |
+| `design` | `slides/*.svg`, `reviews/*.md`, `review-manifest.json` |
 
 ## Phase 7: Delivery (Hard Stop)
 
