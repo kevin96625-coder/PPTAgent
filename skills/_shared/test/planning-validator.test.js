@@ -36,6 +36,12 @@ test('hard: invalid end_page.type', () => {
   assert.ok(run(o).hard_errors.some((e) => e.field === 'end_page.type'));
 });
 
+test('hard: end_page missing type -> clear message', () => {
+  const o = clone(VALID); delete o.end_page.type;
+  const r = run(o);
+  assert.ok(r.hard_errors.some((e) => e.field === 'end_page.type' && /missing/.test(e.msg)));
+});
+
 test('hard: key_points not an array', () => {
   const o = clone(VALID); o.parts[0].pages[0].key_points = 'a, b';
   assert.ok(run(o).hard_errors.some((e) => e.field === 'key_points'));

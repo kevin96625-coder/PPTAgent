@@ -68,8 +68,12 @@ function validateOutline(outline, opts = {}) {
     return finalize();
   }
 
-  if (o.end_page && !END_PAGE_TYPES.includes(o.end_page.type)) {
-    E(null, 'end_page.type', `invalid end_page.type "${o.end_page.type}" (allowed: ${END_PAGE_TYPES.join(', ')})`);
+  if (o.end_page && typeof o.end_page === 'object') {
+    if (!('type' in o.end_page)) {
+      E(null, 'end_page.type', 'end_page is missing required field "type"');
+    } else if (!END_PAGE_TYPES.includes(o.end_page.type)) {
+      E(null, 'end_page.type', `invalid end_page.type "${o.end_page.type}" (allowed: ${END_PAGE_TYPES.join(', ')})`);
+    }
   }
 
   const pages = collectPages(o);
@@ -160,4 +164,6 @@ function validateOutline(outline, opts = {}) {
   }
 }
 
-module.exports = { validateOutline, countDataElements, PAGE_TYPES, VISUAL_WEIGHTS, END_PAGE_TYPES, LAYOUT_TYPES };
+// validateOutline is the entry point; the *_TYPES arrays are exported as the canonical
+// validated-enum vocabulary for reuse by future consumers (e.g. planning_review).
+module.exports = { validateOutline, PAGE_TYPES, VISUAL_WEIGHTS, END_PAGE_TYPES, LAYOUT_TYPES };

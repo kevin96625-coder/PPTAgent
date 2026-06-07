@@ -84,7 +84,7 @@ Only proceed to LLM review if no Critical automated checks fail.
 
 For `mode=holistic`:
 1. Read ALL `${run_dir}/slides/slide-*.svg` files.
-2. Read `${run_dir}/outline.json` to extract `visual_weight`, `type`, and narrative structure per slide. If `visual_weight` is absent (legacy outlines), infer from page type: `quote`/`image` = low, `content`/`process` = medium, `data`/`comparison` = high.
+2. Read `${run_dir}/outline.json` to extract `visual_weight`, `type`, and narrative structure per slide. If `visual_weight` is absent (legacy outlines), infer from page type: `quote`/`image` → low, `data`/`comparison` → high, all other types → medium.
 3. Read the active style YAML for token reference (color, font, border-radius values).
 4. Evaluate using the **5-Dimension Evaluation Framework** from `reviewer.md` Holistic Deck Review section:
    - Visual Rhythm (25%) — layout variety and weight alternation
