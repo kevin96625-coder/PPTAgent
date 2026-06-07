@@ -15,6 +15,11 @@ Always answer in Chinese (Simplified).
 
 - `/ppt-agent:ppt`: End-to-end PPT slide generation workflow.
 
+### Flags
+
+- `--stop-at=<research|outline|draft|design|full>` — stop the workflow after a chosen stage and deliver the partial result to `${RUN_DIR}/output/` (with a `README.md` resume command). Default `full`. Combine with `--run-id=<id>` to resume a stopped run and continue to a later stage. Decision logic: `skills/_shared/scripts/lib/stop-at.js` (unit-tested).
+- `--brand-colors=<path>` — override brand colors; brand styles are written to `${RUN_DIR}/brand-style.yaml`.
+
 ## Workflow Phases
 
 1. Init: Parse arguments, create `openspec/changes/<run_id>/`.
@@ -43,8 +48,6 @@ All agents are spawned via `Task()` calls. No Agent Team required — agents com
 - HTML preview template is in `skills/_shared/assets/preview-template.html`.
 - `outline.json` schema is defined in `skills/_shared/references/prompts/outline-architect.md` (single source of truth).
 - Optimization fallback policy is defined in `skills/gemini-cli/SKILL.md` (single source of truth). When Gemini is unavailable, the workflow degrades to technical validation only — hard-rule checks continue, but aesthetic optimization is not faked.
-- Brand color override is supported via `--brand-colors=<path>` flag. Brand styles are written to `${RUN_DIR}/brand-style.yaml`.
-
 ## HTML Preview Template
 
 The delivery phase generates an interactive `index.html` alongside the SVG files. The template uses 4 placeholders:
