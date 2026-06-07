@@ -365,7 +365,7 @@ deliver the partial result and STOP — do **not** continue to the next phase:
    Or stop at the next stage ([nextStage]):
        /ppt-agent:ppt --run-id=${CHANGE_ID} --stop-at=[nextStage]
    ```
-   (Omit the "next stage" line when `nextStage` is empty, i.e. for `design`→`full`.)
+   (Omit the "Or stop at the next stage" line when `nextStage` is `null` or already `full` — e.g. for target `design` (whose `nextStage` is `full`), the "Run to completion" line already covers it.)
 
 4. Print `output/README.md`'s resume command to the user and STOP.
 
@@ -376,7 +376,9 @@ deliver the partial result and STOP — do **not** continue to the next phase:
 | `research` | `research-context.md`, `requirements.md`, `materials.md` |
 | `outline` | `outline.json`, `outline-preview.md` |
 | `draft` | `drafts/*.svg`, `draft-manifest.json` |
-| `design` | `slides/*.svg`, `reviews/*.md`, `review-manifest.json` |
+| `design` | `slides/*.svg`, `reviews/*.md`, `review-manifest.json`, `slide-status.json` |
+
+    > Note: `requirements.md` is written in Phase 2 but is present by the time the `research` checkpoint fires, so it is included in the `research` deliverable.
 
 ## Phase 7: Delivery (Hard Stop)
 

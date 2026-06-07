@@ -36,3 +36,15 @@ test('early delivery writes output/README.md with a resume command', () => {
 test('early-delivery README block documents per-stage artifacts', () => {
   assert.match(PPT, /Early-delivery README/);
 });
+
+test('each stop-at checkpoint names its target stage', () => {
+  for (const t of ['research', 'outline', 'draft', 'design']) {
+    assert.match(PPT, new RegExp(`Stop-at checkpoint \\(${t}\\)`), `missing checkpoint for ${t}`);
+  }
+});
+
+test('early-delivery artifact table has a row per early-stop target', () => {
+  for (const t of ['research', 'outline', 'draft', 'design']) {
+    assert.match(PPT, new RegExp(`\\| \`${t}\` \\|`), `missing artifact-table row for ${t}`);
+  }
+});
