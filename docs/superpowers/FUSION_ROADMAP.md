@@ -99,3 +99,4 @@
 ## 收尾切片(M2 之后,P3 之前可选)
 - **B** review-core `mode=planning_review`:语义评 页面目标↔key_message 一致性 / 信息层级 / 证据充足度
 - **F** `_shared/references/narrative-rhythm.md`(10/15/20 页模板)+ `pipeline-compat.md`(浏览器/dom-to-svg/OOXML 三层、SVG 安全子集)
+- **布局枚举大清理**(M2 brainstorm 发现):`layout_type` 命名在 outline-architect(5 选 `layout_hint`)/content-core(10 选 snake_case)/bento-grid-layout(人读标题)三处不一致。M2 只对齐了 outline-architect 的 JSON 示例;跨全部消费方(slide-core 等)统一为单一 10 选枚举 + validator 升级为硬校验,留作独立小任务。

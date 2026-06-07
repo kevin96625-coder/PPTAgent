@@ -21,7 +21,11 @@
 - **`review-core` 现已读 style YAML + outline.json**(title/context),并把 index/title/style 传给 Gemini;`reviewer.md` **已有按页型密度目标**(Content Density Targets 表)。
 - **缺口**:per-slide `mode=review` 的 prompt 传了 title 却**没传该页 `type`**(只 holistic 模式读 `type`/`visual_weight`)→ 逐页审查时按页型的密度判定靠 Gemini 猜,非确定给定。
 - **完全没有**:任何对 `outline.json` 的结构化校验器;`density-targets` 是 markdown 表(无机器可读单一来源)。
-- `outline.json` 每页字段(来自 `outline-architect.md`,单一来源):`index, title, subtitle, type(content|data|comparison|process|quote|image), layout_type(10 选,见 bento-grid-layout.md), visual_weight(low|medium|high), key_points[], data_elements, notes`;`key_message` 在 **part 级**;`cover.type`、`end_page.type(thank_you|call_to_action|contact|q_and_a)`。
+- `outline.json` schema 现状(**已核实有内部不一致,M2 顺手对齐**):
+  - **事实权威 = content-core.md**(实际生成 outline 的 agent):每页 `index, title, type, key_points[], layout_type(10 选 snake_case), visual_weight(low|medium|high), data_elements(typed 数组:metric/chart/table/comparison_bar), notes`;`key_message` 在 **part 级**。
+  - **`outline-architect.md` 的 JSON 示例过时**:写成 `layout_hint`(5 选)、无 `data_elements`——但其指导表又用 hero_grid 等 10 选名。→ M2 把该 JSON 示例对齐到事实权威。
+  - `cover` = `{title, subtitle, author, date}`,**无 `type`、无 key_points**;`end_page` = `{type(thank_you|call_to_action|contact|q_and_a), title, content}`。
+  - 布局命名历史在 outline-architect(5)/content-core(10)/bento-grid-layout(人读标题)三处有出入 → validator 对 layout **软校验**,不硬拒(详见 §3.3)。完整布局枚举大清理留作 roadmap 的独立小任务。
 - 约定:core 逻辑 Node/TS;`node:test`(每 skill 自带 package.json+test/);markdown 用 grep 测试;直提 main。
 
 > ⚠️ 基线修正:P0 复审均分 7.49/10 **偏低**——因测量时未传 style+页型,而生产 review-core 是传的。真值由本里程碑 **Task 1** 给出。
@@ -33,7 +37,7 @@
 **本份 M2 做(E+C+D + Task 1)**:
 - **C** `planning_validator`(Node):Phase 4 大纲后校验 `outline.json`。
 - **E** reviewer 页型上下文:per-slide `mode=review` 补传 `type`(+`visual_weight`)。
-- **D** 方法论嵌入:workflow-san method 原则进 `outline-architect.md`。
+- **D** 方法论嵌入 + **对齐 outline-architect.md 过时的 schema 示例**(validator 的前提):`outline-architect.md`。
 - **Task 1**:用户在插件会话跑一次带埋点 12 页,补首轮通过率/修复轮次真值。
 
 **刻意不做(留下一份切片或后续里程碑)**:
@@ -57,37 +61,38 @@
 
 ### 3.3 校验项
 
-**硬错误(BLOCK → 让 lead 用 content-core `mode=revise` 修,再校)**:
+**硬错误(BLOCK → 让 lead 用 content-core `mode=revise` 修,再校)** —— 只硬校验**单源一致**的字段,避免误拒真实大纲:
 - `outline.json` 合法 JSON;必填顶层字段:`title, total_pages, approved, cover, parts, end_page`。
-- 每页必填:`index, title, type, layout_type, visual_weight, key_points`(`key_points` 须为数组)。
-- enum 合法:`type ∈ {content,data,comparison,process,quote,image}`;`layout_type ∈` bento 10 选;`visual_weight ∈ {low,medium,high}`;`cover.type`、`end_page.type` 在各自集合。
-- `index` 从 1 连续无缺无重;`total_pages` == 实际页数 且落在 `input.md` 的 `--pages` 区间。
+- 每页必填:`index, title, type, key_points`(`key_points` 须为数组)。
+- enum 合法:`type ∈ {content,data,comparison,process,quote,image}`;`end_page.type ∈ {thank_you,call_to_action,contact,q_and_a}`;`visual_weight`(若存在)`∈ {low,medium,high}`。
+- `index` 从 1 连续无缺无重;`total_pages` == parts 内实际页数 且落在 `input.md` 的 `--pages` 区间。
+- (不硬校验 `cover.type`——cover 无 type 字段;不硬校验 `layout_type` 枚举——命名未统一,见下软警告。)
 
 **软警告(不阻塞;在 Phase 4 Hard Stop 的 AskUserQuestion 里**一并呈现给用户**,由用户决定改不改)**:
-- **密度(确定性,双重检查)**:质量优先——单数 key_points 会漏掉"数据密集页"的过载(data 页常 key_points 少但 data_elements 多),故同时查两个预算:
-  1. `len(key_points)` 对照 `max_key_points`,超出 → `warn`。
-  2. 估算 `info_units = len(key_points) + count(data_elements)` 对照 `target_info_units`:超 `max+2` → `major`;cover/quote 出现任何 `key_points` 或 `info_units>3` → `critical`(对应 reviewer.md "exceeds type max by >2 = Major;cover/quote >3 = Critical")。
+- **layout(软)**:页缺 `layout_type`(也接受历史字段名 `layout_hint`),或其值不在 10 选 snake_case 集合 → 警告。**不硬拒**(命名历史未统一)。
+- **visual_weight 缺失** → 警告(按 outline-architect"每页 MUST 有";缺则下游按 medium 处理)。
+- **密度(确定性,双重检查)** —— 只对 `parts[].pages[]`(cover/end_page 无 key_points,跳过)。质量优先:单数 key_points 会漏掉"数据密集页"的过载(data 页常 key_points 少但 data_elements 多),故同时查两个预算:
+  1. `len(key_points)` 对照该页型 `max_key_points`,超出 → `warn`。
+  2. 估算 `info_units = len(key_points) + count(data_elements)` 对照该页型 `target_info_units`:超 `max+2` → `major`;`quote`/`image` 页出现任何 `key_points`,或 `info_units>3` → `critical`(对应 reviewer.md "exceeds type max by >2 = Major;quote/image 等低密页超限 = Critical")。
   - `count(data_elements)` 判定规则(确定性):数组→长度;数字→该值;缺失/null→0;其他对象→其顶层条目数。两个检查都是计数,无模糊估算。
 - **布局多样性**:连续 >3 页相同 `layout_type` → 警告(对应 reviewer.md 单调性规则)。
 - **visual_weight 节奏**:连续 >3 页 `high` → 警告(对应 FUSION 密度交替节奏)。
 - **part-level key_message 缺失** → 警告(M2 方法论要求每节有明确论点)。
 
-### 3.4 density-targets.json(逐字来自 reviewer.md,DRY 单一来源)
-结构(键 = 页型;reviewer.md 的 `timeline` 行是布局键,不在 page-type enum,作为可选键保留并注明):
+### 3.4 density-targets.json(逐字来自 reviewer.md,机器可读单一来源)
+键 = **6 个 page type**(planning_validator 按 `page.type` 取用)。reviewer.md 密度表里的 `cover` 行对应 cover 对象(无 key_points,validator 跳过)、`timeline` 行是布局非页型——两者不进本 JSON,留在 reviewer.md 供 Gemini 看渲染图时用。
 ```json
 {
-  "cover":      { "target_info_units": [2,3], "max_key_points": 0 },
   "quote":      { "target_info_units": [1,2], "max_key_points": 0 },
   "image":      { "target_info_units": [1,2], "max_key_points": 0 },
   "content":    { "target_info_units": [3,5], "max_key_points": 3 },
   "data":       { "target_info_units": [4,7], "max_key_points": 2 },
   "comparison": { "target_info_units": [4,6], "max_key_points": 3 },
-  "process":    { "target_info_units": [3,5], "max_key_points": 5 },
-  "timeline":   { "target_info_units": [3,6], "max_key_points": 6 }
+  "process":    { "target_info_units": [3,5], "max_key_points": 5 }
 }
 ```
-- `reviewer.md` 的密度表改为"**数值见 `density-targets.json`**"的指针,消除双源漂移(reviewer 是 markdown,引用即可;planning-validator 是 import)。
-- comparison 的 "2-3 per column"、process 的 "3-5 steps" 等口语化上限,取其整数上限作 `max_key_points`(comparison=3、process=5),在 JSON 注释/spec 注明取整规则。
+- comparison 的 "2-3 per column"、process 的 "3-5 steps" 等口语化上限,取整数上限作 `max_key_points`(comparison=3、process=5),JSON 旁注明取整规则。
+- **DRY**:`reviewer.md` 密度表的这 6 个页型行数值必须与本 JSON 一致;`reviewer.md` 因被 Gemini 当 markdown 读、不能 import JSON,故保留其表但加一行"数值与 `density-targets.json` 同步";一个测试断言两边 6 行数值相等(防漂移)。
 
 ### 3.5 输出:`${RUN_DIR}/planning-validation.json`
 ```json
@@ -129,10 +134,17 @@ node skills/_shared/scripts/planning-validator-cli.js \
 
 ---
 
-## 5. 组件 D:方法论嵌入(便宜)
+## 5. 组件 D:方法论嵌入 + outline schema 示例对齐(同一文件)
 
-### 5.1 改动
-在 `skills/_shared/references/prompts/outline-architect.md` 的指导部分嵌入 workflow-san `method.md` 三条核心(用项目既有中文风格):
+### 5.0 schema 示例对齐(顺手修,validator 的前提)
+`outline-architect.md` 的 JSON 示例过时,与事实权威(content-core)不一致。改其页对象示例:
+- `layout_hint`(5 选)→ `layout_type`(10 选 snake_case,与 content-core/bento 一致)。
+- 补 `data_elements`(typed 数组,引用 content-core 的 metric/chart/table/comparison_bar 形态)。
+- 保留 `transition_cue`/`notes`/`visual_weight`/`key_points`/`type`。
+这样 planning_validator 校验的 schema、生成器(content-core)产出的 schema、canonical 文档三者统一。(完整布局枚举跨文件大清理仍留 roadmap 独立任务——本步只对齐 outline-architect 这一处示例。)
+
+### 5.1 方法论嵌入
+在 `outline-architect.md` 的指导部分嵌入 workflow-san `method.md` 三条核心(用项目既有中文风格):
 - **从问题开始,不从模板开始**——先明确"这套要回答什么问题",再排页。
 - **内容先行,设计后行**——大纲只定内容与论点,不预设视觉效果。
 - **每节有明确论点**——每个 part 的 `key_message`、每页"这一页想说明什么"必须显式(与 C 的 part-level key_message 软警告呼应)。
@@ -169,8 +181,9 @@ node skills/_shared/scripts/planning-validator-cli.js \
 - **ppt.md / review-core.md / outline-architect.md**:grep 结构测试(Phase 4 调 planning-validator-cli;mode=review 传 type;三条方法论原则在位),且做**空洞性自检**(删除对应内容该测应失败)。
 
 ## 8. 验收标准
-- planning-validator 全单测过;对一份故意构造的坏 outline 报出全部硬错误且 exit 1;对干净 outline ok:true。
-- density-targets.json 与 reviewer.md 表数值一致;reviewer.md 改为指针无重复数值。
+- planning-validator 全单测过;对一份故意构造的坏 outline 报出全部硬错误且 exit 1;对干净 outline ok:true;对仅 layout/密度问题的 outline → ok:true + 对应 warnings(不阻塞)。
+- density-targets.json 6 页型数值与 reviewer.md 表对应行一致(一致性测试守护)。
+- outline-architect.md JSON 示例已对齐(`layout_type` 10 选 + `data_elements`),与 content-core 一致。
 - review-core mode=review 的 prompt 确定包含该页 `type`。
 - outline-architect.md 含三条方法论原则,grep 测试守护。
 - Phase 4 接线:硬错→revise 循环;软警→Hard Stop 呈现;无 Node→优雅跳过。
