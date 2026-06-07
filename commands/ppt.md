@@ -130,6 +130,8 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
    | only `requirements.md` or `research-context.md` (resume Phase 2–3) | `none` |
    | nothing / fresh run | `none` |
 
+   Note: a fully-completed Phase 6 maps to `COMPLETED_STAGE=draft` (via `slide-status.json`), not `design`. Resuming such a run with `--stop-at=design` therefore re-enters Phase 6, which is idempotent (already-passed slides are skipped). So `design` is a valid stop target but never an "already-done" short-circuit value — this is intentional and safe.
+
    ```bash
    # APPROVED = "true" if outline.json exists with "approved": true, else "false"
    node skills/_shared/scripts/stop-at-cli.js \
