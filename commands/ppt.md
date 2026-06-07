@@ -269,6 +269,7 @@ For each slide (or in batches):
    ```text
    Task(subagent_type="ppt-agent:review-core", prompt="run_dir=${RUN_DIR} mode=review slide_index=${N}")
    ```
+   review-core 会从 outline.json 读该页 `type`/`visual_weight` 并传给 reviewer,使按页型密度目标在逐页审查时确定生效(封面/quote/image 等低密页不被当普通内容页扣分)。
    Checks layout balance, color harmony, typography, readability, information density.
    Outputs `${RUN_DIR}/reviews/review-{nn}.md` with typed optimization suggestions + pass/fail.
    **This step MUST produce a review file for EVERY slide.** If review-core is not dispatched, Phase 6 is incomplete.

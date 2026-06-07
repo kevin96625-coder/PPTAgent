@@ -45,16 +45,16 @@ Only proceed to LLM review if no Critical automated checks fail.
 ## Execution
 1. Read the full SVG source from `${run_dir}/slides/slide-{slide_index}.svg`.
 2. Read the active style YAML (e.g. `skills/_shared/references/styles/${style}.yaml`) to extract style tokens (colors, fonts, border-radius, gap).
-3. Read `${run_dir}/outline.json` to get the slide's title and context.
+3. Read `${run_dir}/outline.json` to get the slide's title and context. Find the slide entry whose `index` matches `slide_index`. Extract `title`, `type`, and `visual_weight`. If `visual_weight` is absent (legacy outlines), infer from `type`: `quote`/`image` → `low`, `content`/`process` → `medium`, `data`/`comparison` → `high`. (Cover slides use `type: cover`; end/closing slides use their declared `type`.) Purpose: pass `type` and `visual_weight` into the Gemini prompt so the reviewer's per-type density targets engage deterministically — preventing low-density pages (cover/quote/image) from being penalized as content pages.
 4. Send `heartbeat` when starting.
 5. Build a review prompt that includes:
    - The **full SVG source code** (MUST be included — reviewing by filename alone is forbidden per `gemini-cli/SKILL.md` constraints)
    - The **style token values** (color scheme, typography, card style)
-   - The **slide context** (index, title, presentation style name)
+   - The **slide context** (index, title, presentation style name, page type, visual weight)
 6. Call Gemini for layout & aesthetic optimization via the `ppt-agent:gemini-cli` skill.
    The Skill tool loads the skill's SKILL.md into context at runtime (not pre-injected). The skill instructs how to call `invoke-gemini-ppt.ts` via Bash. Both `Skill` and `Bash` tools are required.
    ```
-   Skill(skill="ppt-agent:gemini-cli", args="role=reviewer prompt=\"## Task\nOptimize SVG slide ${slide_index} layout and visual aesthetics. Primary output: typed optimization suggestions. Secondary: quality gate scores.\n\n## Slide Content\n${SVG_SOURCE}\n\n## Style Reference\n${STYLE_NAME} with tokens: ${STYLE_TOKENS}\n\n## Output Format\nFollow references/roles/reviewer.md: Optimization Suggestions (typed) → Suggestions JSON → Quality Gate.\"")
+   Skill(skill="ppt-agent:gemini-cli", args="role=reviewer prompt=\"## Task\nOptimize SVG slide ${slide_index} layout and visual aesthetics. Primary output: typed optimization suggestions. Secondary: quality gate scores.\n\n## Slide Content\n${SVG_SOURCE}\n\n## Style Reference\n${STYLE_NAME} with tokens: ${STYLE_TOKENS}\n\n## Slide Context\nSlide index: ${slide_index}\nTitle: ${SLIDE_TITLE}\nPresentation style: ${STYLE_NAME}\nPage type: ${PAGE_TYPE}\nVisual weight: ${VISUAL_WEIGHT}\n\n## Output Format\nFollow references/roles/reviewer.md: Optimization Suggestions (typed) → Suggestions JSON → Quality Gate.\"")
    ```
    The skill calls `npx tsx skills/gemini-cli/scripts/invoke-gemini-ppt.ts --role reviewer --output "${run_dir}/reviews/gemini-raw-${slide_index}.md"`.
    Gemini's raw output is written to `gemini-raw-{slide_index}.md` — **this file MUST be preserved** as an intermediate artifact.

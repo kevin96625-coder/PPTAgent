@@ -22,3 +22,14 @@ test('Phase 4 planning_validator gate routes hard errors to content-core revise 
   assert.match(gate[0], /mode=revise/);
   assert.match(gate[0], /warning|警告/i);
 });
+
+const REVIEW_CORE = read('../../../agents/review-core.md');
+
+test('review-core mode=review passes the slide type into the Gemini prompt', () => {
+  assert.match(REVIEW_CORE, /type/);
+  assert.match(REVIEW_CORE, /visual_weight/);
+  // the per-slide review must include the page type in the Slide Context passed to Gemini
+  // (strict: requires literal "Page type:" label in the Slide Context block)
+  assert.match(REVIEW_CORE, /##\s*Slide Context[\s\S]*?Page type:/);
+  assert.match(REVIEW_CORE, /##\s*Slide Context[\s\S]*?Visual weight:/);
+});
