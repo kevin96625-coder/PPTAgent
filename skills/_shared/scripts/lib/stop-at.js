@@ -19,8 +19,10 @@ function parseStopAt(raw) {
 
 // 'none'/empty → 0 (nothing completed). research..full → 1..5. Unknown → throw.
 function stageRank(stage) {
-  if (stage === 'none' || stage === undefined || stage === null || String(stage).trim() === '') return 0;
-  const i = STAGES.indexOf(String(stage).trim().toLowerCase());
+  if (stage === undefined || stage === null || String(stage).trim() === '') return 0;
+  const s = String(stage).trim().toLowerCase();
+  if (s === 'none') return 0;
+  const i = STAGES.indexOf(s);
   if (i < 0) throw new Error(`Unknown stage "${stage}"`);
   return i + 1;
 }

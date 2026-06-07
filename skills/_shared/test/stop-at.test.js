@@ -12,6 +12,10 @@ test('STAGE_PHASE maps each stage to the phase it completes after', () => {
   });
 });
 
+test('STAGE_PHASE has an entry for every STAGES element', () => {
+  for (const s of STAGES) assert.ok(s in STAGE_PHASE, `${s} missing from STAGE_PHASE`);
+});
+
 test('parseStopAt defaults empty/undefined to full', () => {
   assert.strictEqual(parseStopAt(undefined), 'full');
   assert.strictEqual(parseStopAt(''), 'full');
@@ -31,5 +35,12 @@ test('stageRank: none=0, research=1 ... full=5', () => {
   assert.strictEqual(stageRank('none'), 0);
   assert.strictEqual(stageRank(undefined), 0);
   assert.strictEqual(stageRank('research'), 1);
+  assert.strictEqual(stageRank('outline'), 2);
+  assert.strictEqual(stageRank('draft'), 3);
+  assert.strictEqual(stageRank('design'), 4);
   assert.strictEqual(stageRank('full'), 5);
+});
+
+test('stageRank accepts uppercase NONE as the empty sentinel', () => {
+  assert.strictEqual(stageRank('NONE'), 0);
 });
