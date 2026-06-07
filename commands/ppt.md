@@ -188,18 +188,30 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
    Agent uses Pyramid Principle from `_shared/references/prompts/outline-architect.md`.
    Outputs `${RUN_DIR}/outline.json` and `${RUN_DIR}/outline-preview.md`.
 
-2. **MANDATORY**: MUST call `AskUserQuestion` to present the outline as "digital sticky notes" view.
+2. **策划质量门控(planning_validator)**:大纲产出后,审批前,先确定性校验 `outline.json`:
+   ```bash
+   node skills/_shared/scripts/planning-validator-cli.js \
+     --outline "${RUN_DIR}/outline.json" \
+     --targets skills/_shared/references/density-targets.json \
+     --pages "${PAGES}" > "${RUN_DIR}/planning-validation.json"
+   ```
+   读 `${RUN_DIR}/planning-validation.json` 的 `{ ok, hard_errors, warnings }`:
+   - **有 `hard_errors`(exit 1)**:不要把大纲交给用户。用 `Task(content-core, mode=revise, feedback=<hard_errors 摘要>)` 让其修复,再重跑本校验,直到 `ok:true`。
+   - **`ok:true` 且有 `warnings`**:继续到审批 Hard Stop,但**把 warnings 摘要并入下一步 AskUserQuestion 的说明**(密度超标/布局单调/visual_weight 节奏/缺 key_message 等),让用户知情决定是否让 content-core revise。
+   - **无 Node 可用**:跳过本校验(优雅降级),在产物里注明"未做结构校验"。
+
+3. **MANDATORY**: MUST call `AskUserQuestion` to present the outline as "digital sticky notes" view.
    User can approve, adjust page order, add/remove sections, or change emphasis.
    Do NOT proceed until user approves.
 
-3. **After user approves**: Set `"approved": true` in `outline.json` and write the updated file. This field is the resume guard — `--run-id` resume checks it to determine whether Phase 4 Hard Stop was completed.
+4. **After user approves**: Set `"approved": true` in `outline.json` and write the updated file. This field is the resume guard — `--run-id` resume checks it to determine whether Phase 4 Hard Stop was completed.
 
-4. If user requests changes, re-run content-core in **revise** mode with the user's feedback:
+5. If user requests changes, re-run content-core in **revise** mode with the user's feedback:
    ```text
    Task(subagent_type="ppt-agent:content-core", prompt="run_dir=${RUN_DIR} mode=revise feedback=${USER_FEEDBACK}")
    ```
    content-core applies incremental changes to the existing `outline.json` (reorder, add, remove, modify) instead of regenerating from scratch. Then re-present the updated outline to the user for approval. Repeat until user approves.
-5. **Stop-at checkpoint (outline)**: if `target == "outline"`, run "Stop-at: Early delivery (shared)" with `target=outline`, then STOP.
+6. **Stop-at checkpoint (outline)**: if `target == "outline"`, run "Stop-at: Early delivery (shared)" with `target=outline`, then STOP.
 
 ## Phase 5: Planning Draft (策划稿)
 
