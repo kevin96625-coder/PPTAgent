@@ -25,7 +25,7 @@
 |---|--------|------|--------|------|
 | P0 | 基线 + 源核实 | ✅ 完成 | 实测基线、核实 Akxan、修 Gemini bug | — |
 | M1 | `--stop-at` 灵活性 | ✅ 完成 | 分阶段停止 + 复用 --run-id 恢复 | P0 |
-| **M2** | **质量门控** | 🔵 **进行中** | planning_validator + reviewer 页型上下文 + 方法论嵌入 | P0 |
+| **M2** | **质量门控** | ✅ 代码完成(基线 Task0 待用户跑) | planning_validator + reviewer 页型上下文 + 方法论嵌入 | P0 |
 | P3 | 排版 + 配色 | ⚪ 待办 | 7 级字号阶梯 + 60/30/10 配色校验 | M2 |
 | P4 | 资源注入 | ⚪ 待办 | Akxan 资源库 + Node assembler 按需注入 | M2;Akxan(已核实) |
 | P5 | PPTX 导出 | ⚪ 待办 | 方案 D MVP + 统一 ppt/export + 复用 storybook | bible-class Plan4 更佳 |
@@ -51,10 +51,13 @@
 
 ---
 
-## 进行中
+## 进行中 / 近完成
 
-### M2 — 质量门控 🔵(brainstorm 完成,spec 待写)
-**范围(第一份)**:
+### M2 — 质量门控 ✅ 代码完成(2026-06-07,基线 Task0 待用户跑)
+子代理 TDD,**58 测试全过**;spec `2026-06-07-fusion-m2-quality-gate-design.md`、plan `2026-06-07-fusion-m2-quality-gate.md`。
+已交付:`density-targets.json`(单一来源)、`planning-validator.js`+CLI(Phase 4 门控:硬错阻塞/软警提示/3 轮封顶/无 Node 降级)、review-core 传页型(含封面/尾页查找)、outline-architect schema 对齐 + 方法论嵌入。
+**剩 Task 0(用户)**:插件会话跑 `--pages=12 --stop-at=design` 一次,回贴 review-manifest.json → 补首轮通过率/修复轮次真值、修正 7.49。
+**范围(第一份,已实现)**:
 - **C planning_validator**(Node,`_shared`):Phase 4 大纲后校验 outline.json——硬错误(JSON/enum/字段/index)阻塞;软警告(密度/布局多样性/visual_weight 节奏)在 Hard Stop 提示。密度目标抽到共享 `density-targets.json`(与 reviewer 共用)。
 - **E reviewer 页型上下文**:per-slide `mode=review` 补传 `type`(+visual_weight),让 reviewer 已有的按页型密度目标确定生效。
 - **D 方法论嵌入**:workflow-san method 原则进 outline-architect.md。
