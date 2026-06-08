@@ -1,5 +1,28 @@
 # 🔴 明天从这里开始 — Dogfood 实测发现 + 后续步骤(2026-06-07 晚)
 
+---
+
+## 🟩🟩 2026-06-08 自主推进收尾 — 统一 dogfood 验收清单(以本节为准,旧的零散清单见下方存档)
+
+用户当轮指示"完全完成后我再一次性测试"。本轮已把 **P3 / P6 / P4 / P5** 全部 code-complete(在 M2/M2.5/M2.6 之上),全程 spec→自审→子代理 TDD→对抗审核→回填路线图,**直提 main**,`_shared` 234 测试 + workflow-san 25 测试全过。**只剩 P7(core 抽离+MCP,10+ 天大重构,有真实战略岔口)未做——刻意不在你验证前跑**(其形态取决于本次 dogfood 结果)。
+
+**请在插件会话(需 Gemini OAuth)跑一次资产页密集主题**,如:`/ppt-agent:ppt --pages=12 <如 小米SU7发布会 / 一个圣经故事>`,然后照下面**逐里程碑**核验,回贴 `output/index.html` 观感 + 各 manifest:
+
+| 里程碑 | 验收点 |
+|--------|--------|
+| **M2.5 真实图片** | ① 资产页真嵌真实照片(非手绘),`images-manifest.json` 有记录;② 搜不到图的页是 `needs_real_image` 占位不造假;③ Phase 6 先出样片预览门再批量;④ `reviews/gemini-raw-*.md` 资产页有 Asset Relevance 数值评分(证明看图跑通) |
+| **M2.6 确定性自修** | ⑤ `svg-autofix` 生效且**没把徽章深色字/hero 标题改糊**(若有=回归,记下);⑥ 首轮通过率 / fix 轮次 vs 基线(58% / 0.8) |
+| **P3 排版+配色** | ⑦ slide-status/审查产物里出现 `type-scale`/`color-ratio` 软警告字段(证明跑通)且 **fix 轮次未因此上升**(P3 是 advisory-only,不该触发额外修复) |
+| **P6 跨页一致性** | ⑧ **同一主体跨页视觉一致**(参考图生效——主日学同角色 / 发布会同产品);⑨ 某资产页首生成不佳是否触发 `--redo` 重绘并复审通过,触顶则占位不假图;manifest 有 `reference_of`/`seed`/`redo_count` |
+| **P4 资源注入** | ⑩ 数据页是否引入更专业 SVG 图型(radar/funnel/gauge);⑪ 产物里**无 HTML/CSS 误入 SVG**(移植适配反向验证);⑫ 页内上下文未爆炸(selector 截断生效) |
+| **P5 PPTX 导出** | ⑬ **PowerPoint 2016+ 打开 `output/presentation.pptx`**:每页显示?SVG 可点选编辑(非光栅化)?中文/字体正常?资产图在(外链已内联)?→ **保真够用=方案D 收官;不够=记差距,评估方案A**(详见本文末 P5 验收节) |
+
+**跑完回贴**:`output/index.html` 观感 + 上 13 条 + `review-manifest.json`/`slide-status.json`/`images-manifest.json` + PowerPoint 截图。我据此定 **P7 是否做 / 怎么做**,以及是否需要针对 dogfood 暴露的真问题做修复里程碑。
+
+> ⚠️ 旧版"别在验证前继续堆 P3+"的告诫已被用户本轮"完全完成再测"指示覆盖;下方 2026-06-07 的零散记录保留供追溯。
+
+---
+
 > **🟢 2026-06-08 更新(M2.5 已实现)**:本文件的"头号发现"已转化为里程碑 **M2.5 = 真实图片 + 视觉可用性门**,并已 **brainstorm → 审核 → spec → plan → 子代理 TDD 实现完(97 测试全过)**。
 > - 设计:`specs/2026-06-08-fusion-m2.5-real-images-design.md`;实现计划:`plans/2026-06-08-fusion-m2.5-real-images.md`;进度:`FUSION_ROADMAP.md`。
 > - 关键改动:slide-core 放开 `<image>`(原 `slide-core.md:97` 禁令已解)+ 图主导版式;research 阶段联网搜图/image-gen → `images/` + manifest;Phase 6 **样片预览门**(样片在前批量在后);review-core **资产页渲染→Gemini `--image` 看图** + 资产/专业度维度(堵 8.2 虚假高分);缺图标 `needs_real_image` 不画假物。
