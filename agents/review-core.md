@@ -122,6 +122,34 @@ Return the Asset Relevance & Professionalism score (0-10), pass/fail (< 6 = crit
 
 **Data pages keep the text (SVG-source) review.** For pages where `asset.needed` is false or absent, do NOT render to PNG and do NOT pass `--image` — the existing text-based review on the SVG source is sufficient and saves tokens/latency. The vision pass is reserved for asset pages, where photo correctness is the thing that text review is blind to.
 
+### Asset-critical redo loop (review-driven image regeneration)
+
+When the asset dimension comes back **critical (< 6)** for one or more pages, route them through `redo-plan` — a read-only planner that decides what to do per page (it never calls `generate.js` itself):
+
+```js
+const { planRedo } = require('skills/_shared/scripts/lib/redo-plan');
+// reviewResults: [{ page, assetScore, kind, reason }]  (assetScore = the Asset dimension score)
+// manifest:      the images-manifest.json (per-page status / redo_count / reference_of)
+const plan = planRedo(reviewResults, manifest, { cap: 2 }); // { redo, reshoot, exhausted }
+```
+
+Then act on each list:
+
+- **`plan.redo`** (scene pages, `redo_count < cap`) → re-generate the image with a **NEW seed** (NEVER reuse the original seed — the same seed would regenerate the same bad image):
+  ```bash
+  node skills/image-gen/scripts/generate.js --run-dir "${run_dir}" --label slide-NN \
+    --out "${run_dir}/images/slide-NN.png" \
+    --prompt-file "${run_dir}/briefs/slide-NN.txt" \  # original prompt file
+    --aspect 16:9 --redo \
+    --reference "${run_dir}/images/slide-MASTER.png" \  # ONLY if reference_of is set (keep the character on-model)
+    --seed <NEW_seed>                                    # 新 seed,不复用原 seed
+  ```
+  Append the review `reason` to the prompt file before the call (tell the generator what was wrong). The `--reference master` is kept for grouped pages so the redo stays consistent with the master, but the seed varies so we get a *different, better* sample. After regenerating, **re-render the slide PNG and re-review the page ONCE**. Write the incremented `redo_count` back into the manifest. **Cap is 2 rounds per page (`封顶 2`).**
+- **`plan.reshoot`** (brand-entity pages) → search ≠ generation, so do NOT auto-`--redo`. Send these **back to the Phase 6 preview gate** for a human to swap in / add a better official image.
+- **`plan.exhausted`** (scene pages that hit the cap) → **keep the placeholder + mark `needs_real_image`**; never hand-draw a fake. Delivery is not blocked (M2.5 behavior).
+
+**Master replaced at the preview gate → re-derive the whole group.** If the user replaces or rejects a group's master image at the Phase 6 preview gate, re-run the consistency derivation for that group (`重派生整组`): regenerate each derived page with `--reference <new master>` so the new look propagates.
+
 ### Holistic Mode Execution
 
 For `mode=holistic`:

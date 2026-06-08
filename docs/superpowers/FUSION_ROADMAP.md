@@ -29,13 +29,26 @@
 | **M2** | **质量门控** | ✅ 代码完成 + 真实 dogfood 验证 | planning_validator + reviewer 页型上下文 + 方法论嵌入 | P0 |
 | **M2.5** | **🔴🔴 真实图片 + 视觉可用性门** | ✅ **代码完成(2026-06-08,子代理 TDD,97 测试全过)** | 混合图源(品牌实体联网搜图 / 抽象走 image-gen)· slide-core 放开 `<image>`+图主导版式 · 视觉审查(渲染→Gemini 看图,资产维度)· 人工预览门(样片+候选图,样片在前批量在后)。**剩**:用户在插件会话跑一次真实 dogfood 验证产物质量。 | M2(dogfood:产物不可用 + 审查虚假高分) |
 | **M2.6** | **机械自修(确定性)** | ✅ **代码完成(2026-06-08,子代理 TDD,125 测试)** | svg-autofix:字号下限/暗底文本对比度(色彩数学)/顶层 title·page-number 安全带钳位,**全部"只会变好"**(嵌套坐标/装饰/卡片文本/全出血 hero 标题一律不碰,交 Gemini)。slide-core 生成后先自修再校验。 | M2.5 |
-| P3 | 排版 + 配色 | ⚪ **下一个** | 7 级字号阶梯 + 60/30/10 配色校验(14px floor 已被 M2.6 覆盖) | M2.6 |
-| P4 | 资源注入 | ⚪ 待办 | Akxan 资源库 + Node assembler 按需注入 | M2;Akxan(已核实) |
+| **P3** | **排版 + 配色(安全瘦版)** | ✅ **代码完成(2026-06-08,子代理 TDD+对抗审核,176 测试)** | 7 级字号阶梯 + 60/30/10 配色:**纯增益**——生成期引导(style YAML `typography_ladder`/`color_ratio`)+ **软警告专用**确定性校验器(`type-scale.js`/`color-ratio.js`,只读、永不改写 SVG、永不硬阻塞、exit 恒 0),补 Gemini 看不到的角度(数字号种数)。**零回退面**(结构性保证)。 | M2.6 |
+| P4 | 资源注入 | ⚪ **下一个** | Akxan 资源库 + Node assembler 按需注入 | M2;Akxan(已核实) |
 | P5 | PPTX 导出 | ⚪ 待办 | 方案 D MVP + 统一 ppt/export + 复用 storybook | bible-class Plan4 更佳 |
-| P6 | 智能配图 | ⚪ 待办 | 复用 skills/image-gen(Plan1 已完成) | Plan1 ✅ |
+| **P6** | **跨页配图一致性 + 审查驱动重绘(post-M2.5 精简版)** | ✅ **代码完成(2026-06-08,TDD,203 测试全过(含 P6 新增 26:asset-consistency 7 + redo-plan 6 + prose 6 + validator 3 + manifest 4))** | 跨页同主体一致性(`asset.subject`/归一化 query 分组,master-first→`--reference` 派生)+ 审查驱动 `--redo` 重绘闭环(资产维度 <6 → scene 换新 seed 重绘封顶 2、brand-entity 回预览门重搜、触顶保留占位 `needs_real_image` 不假图)。两个纯逻辑只读规划库 `asset-consistency.js`/`redo-plan.js`(不调 generate.js、不抛错)。 | M2.5;image-gen `--reference`/`--redo`/`--seed` ✅ |
 | P7 | core 抽离 + MCP | ⚪ 待办 | core/(Node/TS)+ MCP server,大重构 | 最后做 |
 
-**当前推荐顺序**:M2 ✅ → M2.5 ✅ → M2.6 ✅ → **P3 排版+配色(下一个)** → P5(方案D MVP)→ P4 → P6 → P7。(B/F 收尾切片可选;可选 M2.7=review-core 效率调优,按需插入。)
+**当前推荐顺序**:M2 ✅ → M2.5 ✅ → M2.6 ✅ → P3 ✅ → P6 ✅ → **P4 资源注入(下一个)** → P5(方案D MVP,保真实测需用户机器)→ P7(留用户拍板)。(B/F 收尾切片可选;可选 M2.7=review-core 效率调优,按需插入。)
+
+### ✅ P6 — 跨页配图一致性 + 审查驱动重绘(精简版,代码完成 2026-06-08)
+**spec/plan**:`specs/2026-06-08-fusion-p6-image-consistency-redo-design.md` + `plans/2026-06-08-fusion-p6-image-consistency-redo.md`。
+**设计铁律**:① master = 组内**首生成**图(非人工认可;认可在 Phase 6 预览门,可替换并触发**重派生**整组);② seed 策略按目的相反——一致性派生用 master seed + `--reference`(求一样),审查 redo 用**新 seed**(求换更好,**绝不复用原 seed**);③ redo 封顶 2 轮、仅资产维度 <6 触发;brand-entity 低分走 reshoot(回预览门)非自动 redo(搜图≠生成);触顶保留占位 + `needs_real_image`,不假图。
+**已交付**:① `asset-consistency.js`(`planReferences`:按 `subject ?? normalize(query)` 分组,master=最小页,scene/brand-entity 双 kind,singleton 走原路;只读、不调 generate.js、不抛错);② `redo-plan.js`(`planRedo`:scene<6 且未触顶→redo 透传 reference_of、brand<6→reshoot、触顶→exhausted、≥6 不动;只读、不抛错);③ outline `asset.subject` 可选字段 + validator 软警告(向后兼容 M2.5);④ images-manifest `reference_of`/`seed`/`redo_count` 字段透传 + 类型校验(缺省合法);⑤ research-core 接线(分组 master-first→`--reference` 派生,master 失败降级单图);⑥ reviewer 新增 `regenerate_image` 建议类型;⑦ review-core + ppt.md Phase 6 redo 闭环(`--redo` 新 seed、封顶 2、reshoot 回预览门、exhausted 保留占位、master 替换重派生)。203 测试全过(含 P6 新增 26:asset-consistency 7 + redo-plan 6 + prose 6 + validator 3 + manifest 4)(纯逻辑 + prose grep)。
+**剩(用户)**:dogfood 验证同主体跨页视觉一致 + 坏生成图触发 redo 并复审通过 / 触顶保留占位。
+
+### ✅ P3 — 排版阶梯 + 60/30/10 配色(安全瘦版,代码完成 2026-06-08)
+**spec/plan**:`specs/2026-06-08-fusion-p3-typography-color-design.md` + `plans/2026-06-08-fusion-p3-typography-color.md`。
+**设计铁律(继承 M2.6 哲学)**:P3 = 纯增益,**绝不自动改写 SVG、绝不硬阻塞、绝不触发 fix loop、exit 恒 0、永不抛错** → 结构性零回退面。价值在生成期引导 + 给 Gemini 的廉价确定性补充信号。
+**已交付**:① 17 个 style YAML 增 `typography_ladder`(7 级 h1..micro)+ `color_ratio`(60/30/10 + buckets);② `type-scale.js`(数字号种数、too-many-sizes>6、off-ladder best-effort);③ `color-ratio.js`(SVG 几何面积估算、就近归桶、不足面积守卫、全出血背景守卫、软警告 info 级);④ `type-color-cli.js`(exit 恒 0)+ `style-mini-parser.js`(零依赖);⑤ `references/typography-ladder.md`;⑥ slide-core/review-core/reviewer 接线(advisory-only,hints 进 Gemini prompt)。176 测试全过。
+**对抗审核抓到并已修**:🔴 渐变/全出血背景页(本仓库惯用版式)误报 `no-dominant` → 加全出血背景守卫;⚠️ 暗色主题跨桶颜色歧义 → 加 ±12 歧义守卫归 other;⚠️ 配色软警告降 info 级;⚠️ styles 测试补 bucket token 存在性校验;⚠️ advisory 步骤由"可选"改"标准"(保证 hints 可靠产出)。
+**剩(用户)**:dogfood 时看 slide-status/审查产物是否出现 type-scale/color-ratio 软警告、且 fix-rounds 未因此上升。
 
 ### ✅ M2.6 — 确定性机械自修(代码完成 2026-06-08)
 **spec/plan**:`specs/2026-06-08-fusion-m2.6-deterministic-autofix-design.md` + `plans/2026-06-08-fusion-m2.6-deterministic-autofix.md`。

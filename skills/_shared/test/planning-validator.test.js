@@ -185,6 +185,27 @@ test('asset: needed=false needs no query', () => {
   assert.ok(!r.hard_errors.some((e) => e.field && String(e.field).startsWith('asset')));
 });
 
+test('asset.subject: present non-empty string is valid (no warning, no hard error)', () => {
+  const r = validateOutline(withPageAsset({ needed: true, kind: 'scene', subject: 'david', query: 'x' }));
+  assert.ok(!r.hard_errors.some((e) => e.field === 'asset.subject'));
+  assert.ok(!r.warnings.some((w) => w.kind === 'asset.subject'));
+});
+
+test('asset.subject: absent is valid (backward compat, M2.5 outline)', () => {
+  const r = validateOutline(withPageAsset({ needed: true, kind: 'scene', query: 'x' }));
+  assert.ok(!r.hard_errors.some((e) => e.field === 'asset.subject'));
+  assert.ok(!r.warnings.some((w) => w.kind === 'asset.subject'));
+});
+
+test('asset.subject: present-but-empty/wrong-type -> soft warning, not hard error', () => {
+  const empty = validateOutline(withPageAsset({ needed: true, kind: 'scene', subject: '   ', query: 'x' }));
+  assert.strictEqual(empty.ok, true);
+  assert.ok(empty.warnings.some((w) => w.kind === 'asset.subject'));
+  const wrongType = validateOutline(withPageAsset({ needed: true, kind: 'scene', subject: 42, query: 'x' }));
+  assert.strictEqual(wrongType.ok, true);
+  assert.ok(wrongType.warnings.some((w) => w.kind === 'asset.subject'));
+});
+
 test('ASSET_KINDS exported vocabulary', () => {
   assert.deepEqual([...ASSET_KINDS].sort(), ['brand-entity', 'none', 'scene']);
 });

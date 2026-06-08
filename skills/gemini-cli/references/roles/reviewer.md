@@ -55,7 +55,7 @@ A slide exceeding its type's max info units by >2 is a Major issue. A cover/quot
 
 ## Suggestion Taxonomy
 
-Every optimization suggestion MUST be classified into exactly one of these 5 types. Each type maps to a specific execution strategy downstream.
+Every optimization suggestion MUST be classified into exactly one of these 6 types. Each type maps to a specific execution strategy downstream.
 
 ### Type 1: `attribute_change`
 
@@ -163,6 +163,29 @@ Cross-slide consistency or narrative issue. Only produced in **holistic review m
   }
 }
 ```
+
+### Type 6: `regenerate_image`
+
+The slide's **embedded real image** (an `asset.needed=true` page) is itself the problem — the generated image is low-quality, off-subject, or inconsistent with the same subject on other pages. This is **NOT a hand-fix**: the SVG layout is fine; the raster asset must be **re-generated** (or, for a fetched real image, re-shot at the preview gate). slide-core must NEVER hand-draw a replacement — that would fabricate a fake product/scene.
+
+**When to use**: emit this **only** when the page carries a generated/fetched image and the **asset dimension score is critical (< 6)** — blurry/distorted subject, wrong or off-brand content, or a character/product that no longer matches the same subject on its master page. Include a concrete `reason` explaining *why the image is bad*, so the downstream redo can append it to the generation prompt and try a **new seed**.
+
+**Schema**:
+```json
+{
+  "type": "regenerate_image",
+  "priority": 1,
+  "description": "Generated scene image is blurry and the character's face is distorted",
+  "details": {
+    "page": 5,
+    "asset_score": 4,
+    "kind": "scene",
+    "reason": "Face is melted/distorted and the robe color does not match the master image on page 3 — regenerate (do NOT hand-draw a replacement)."
+  }
+}
+```
+
+Downstream, `regenerate_image` suggestions are routed through `redo-plan` (Phase 6): `scene` pages go to `generate.js --redo` with a **new seed** (capped at 2 rounds), `brand-entity` pages go back to the preview gate to swap in an official image. Exhausted pages keep the placeholder + `needs_real_image` — never a fake.
 
 ### Priority Levels
 

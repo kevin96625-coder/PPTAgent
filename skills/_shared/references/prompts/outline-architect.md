@@ -62,6 +62,7 @@ Generate a JSON structure wrapped in `[PPT_OUTLINE]` markers:
           "asset": {
             "needed": true,
             "kind": "brand-entity",
+            "subject": "xiaomi-su7",
             "query": "小米 SU7 侧面 官方图 高清",
             "caption": "SU7 低风阻轿跑姿态"
           },
@@ -123,6 +124,7 @@ The optional `asset` object declares whether a page needs a **real visual asset*
     - `"brand-entity"` — a real product / logo / person / branded object (e.g. the actual SU7 car, a company logo). These are **web-fetched real images** (research-core runs a best-effort image search). Never acceptable to hand-draw.
     - `"scene"` — an abstract scene / concept / mood illustration with no single ground-truth referent (e.g. "a calm sunrise over a city skyline"). These go to **image-gen**.
     - `"none"` — no real asset; the page is pure vector/data and slide-core draws it inline.
+  - `subject` (string, optional) — a **stable cross-page key** for the SAME subject/character/product that recurs on multiple pages, e.g. `"shepherd-boy-david"` (a Bible character that must look identical across a lesson) or `"xiaomi-su7"` (the same product car across several slides). When two or more pages share a `subject`, the pipeline keeps their images **visually consistent**: it generates the earliest page (the *master*) first, then derives the rest with `generate.js --reference <master>` (same look). When omitted, pages are grouped by a normalization of `query` instead. Use `subject` whenever you intend a recurring character/product to stay on-model. It must be a non-empty string when present (a soft warning otherwise; absent is always fine).
   - `query` (string, **required when `needed=true`** and `kind` is `brand-entity` or `scene`) — the search/generation query for the image, e.g. `"小米 SU7 侧面 官方图 高清"`. Be specific: include the real product/brand name, the desired angle, and quality words.
   - `caption` (string, optional) — a short caption describing the intended image, used as a generation hint and as fallback alt text.
 

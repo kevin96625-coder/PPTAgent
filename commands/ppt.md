@@ -307,6 +307,7 @@ For each slide (or in batches):
       - `full_rethink` present → regenerate from scratch, **max 1 round**. Re-run `mode=design` **without** `fixes_json` so slide-core produces a fresh layout from the draft reference instead of patching a broken SVG.
       - `layout_restructure` or `content_reduction` present → constrained regeneration with `fixes_json`, **max 2 rounds**.
       - `attribute_change` only → deterministic patch with `fixes_json`, **max 1 round**.
+      - `regenerate_image` present (asset dimension critical, < 6) → **image-redo loop, NOT a slide-core hand-fix** (see step 3b below). The SVG layout is fine; the embedded raster asset must be re-generated/re-shot.
    5. If no suggestions but score < 7.0 → accept with warning (edge case: score fails but reviewer produced no actionable typed suggestions).
    6. **Fallback** (no Gemini / technical-only mode) → only technical fixes (XML, viewBox, safe area, font-size), no suggestion routing. Pass/fail on hard rules only.
 
@@ -319,6 +320,16 @@ For each slide (or in batches):
    Task(subagent_type="ppt-agent:slide-core", prompt="run_dir=${RUN_DIR} mode=design slide_index=${N} style=${STYLE}")
    ```
    Then re-run review-core. If still failing after max rounds, accept current version with quality note.
+
+3b. **Image-redo loop** (for `regenerate_image` / asset-critical pages): the SVG is fine — the *image* is bad. Route these through `redo-plan` (`skills/_shared/scripts/lib/redo-plan.js`), a read-only planner that never calls `generate.js` itself:
+   ```js
+   const { planRedo } = require('skills/_shared/scripts/lib/redo-plan');
+   const plan = planRedo(reviewResults /* [{page,assetScore,kind,reason}] */, manifest, { cap: 2 });
+   ```
+   - **`plan.redo`** (scene) → `node skills/image-gen/scripts/generate.js ... --redo` with the **original prompt-file + the review `reason` appended**, `--reference <master>` **only if** the page has a `reference_of` (keep the character on-model), and a **NEW seed (不复用原 seed)** — reusing the original seed regenerates the same bad image. Re-render the slide PNG and **re-review once**. Increment `redo_count` in the manifest. **Cap is 2 rounds per page (封顶 2).**
+   - **`plan.reshoot`** (brand-entity) → search ≠ generation; send back to the **Phase 6 preview gate** so the user swaps in a better official image. Do NOT auto-`--redo`.
+   - **`plan.exhausted`** (hit the cap) → **keep placeholder** + mark `needs_real_image`; never hand-draw a fake. Delivery proceeds (M2.5 behavior).
+   - **Master replaced at the preview gate** → **重派生** the whole group: re-derive every derived page with `--reference <new master>` so the new look propagates.
 
 4. **Pre-holistic verification gate**: Before launching holistic review, the lead MUST verify that `reviews/review-{nn}.md` exists for EVERY slide in the deck. Count the review files and compare against the total slide count. If any per-slide review is missing, go back and dispatch review-core for the missing slides. Do NOT proceed to holistic review with incomplete per-slide reviews.
 

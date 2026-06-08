@@ -119,6 +119,12 @@ function validateOutline(outline, opts = {}) {
             E(id, 'asset.query', 'asset.needed=true requires a non-empty query');
           }
         }
+        // asset.subject (P6): optional cross-page-consistency key. If present it should be
+        // a non-empty string — a soft warning (not a hard error) keeps M2.5 outlines (which
+        // never carry subject) fully valid while nudging authors toward a usable key.
+        if ('subject' in a && (typeof a.subject !== 'string' || a.subject.trim() === '')) {
+          W(id, 'asset.subject', 'warn', 'asset.subject, when present, should be a non-empty string (used as the cross-page consistency key)');
+        }
       }
     }
 
