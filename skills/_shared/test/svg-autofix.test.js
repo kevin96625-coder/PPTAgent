@@ -43,6 +43,37 @@ test('nested text on a colored surface is NOT contrast-fixed (avoids false-posit
   assert.match(out, /fill="#0f172a"/, 'nested dark badge text fill must survive');
   assert.ok(!fixes.some((f) => f.type === 'contrast'), 'no contrast fix recorded for nested text');
 });
+test('I1: top-level title over a full-bleed image is NOT contrast-fixed (M2.5 hero)', () => {
+  // White hero title sits on a dark photo, but is judged against a light page bg.
+  // The contrast pass must be skipped entirely when a full-bleed <image> exists.
+  const LIGHT = { background: '#ffffff' };
+  const svg = `<svg viewBox="0 0 1280 720"><image href="hero.jpg" x="0" y="0" width="1280" height="720"/><text x="60" y="120" font-size="48" fill="#ffffff">Title</text></svg>`;
+  const { svg: out, fixes } = autofixSvg(svg, { tokens: LIGHT });
+  assert.match(out, /fill="#ffffff"/, 'hero title fill must survive');
+  assert.ok(!fixes.some((f) => f.type === 'contrast'), 'no contrast fix on hero full-bleed');
+});
+test('I1: contrast STILL fires with no full-bleed image present', () => {
+  const svg = `<svg viewBox="0 0 1280 720"><text x="60" y="100" font-size="34" fill="#6366f1">T</text></svg>`;
+  const { svg: out, fixes } = autofixSvg(svg, { tokens: TOK });
+  const m = out.match(/fill="(#[0-9a-fA-F]{6})"/);
+  const { contrastRatio } = require('../scripts/lib/color-contrast');
+  assert.ok(contrastRatio(m[1], '#0f172a') >= 3, `fill ${m[1]}`);
+  assert.ok(fixes.some((f) => f.type === 'contrast'));
+});
+test('I2: top-level text with its own transform is NOT safe-area clamped', () => {
+  const svg = `<svg viewBox="0 0 1280 720"><text data-role="title" transform="translate(0,200)" y="14" font-size="34" fill="#f1f5f9">T</text></svg>`;
+  const { svg: out, fixes } = autofixSvg(svg, { tokens: TOK });
+  assert.match(out, /y="14"/, 'self-transformed title keeps its y');
+  assert.ok(!fixes.some((f) => f.type === 'safe-area'), 'no safe-area fix for self-transformed text');
+});
+test('I3: text inside <a> is treated as nested (no contrast or safe-area fix)', () => {
+  const svg = `<svg viewBox="0 0 1280 720"><a><text data-role="title" y="10" fill="#6366f1" font-size="34">x</text></a></svg>`;
+  const { svg: out, fixes } = autofixSvg(svg, { tokens: TOK });
+  assert.match(out, /fill="#6366f1"/, 'fill unchanged inside <a>');
+  assert.match(out, /y="10"/, 'y unchanged inside <a>');
+  assert.ok(!fixes.some((f) => f.type === 'contrast'), 'no contrast fix inside <a>');
+  assert.ok(!fixes.some((f) => f.type === 'safe-area'), 'no safe-area fix inside <a>');
+});
 test('passing fill unchanged', () => {
   const svg = `<svg viewBox="0 0 1280 720"><text fill="#f1f5f9" font-size="20">x</text></svg>`;
   const { svg: out, fixes } = autofixSvg(svg, { tokens: TOK });

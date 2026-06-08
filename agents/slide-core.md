@@ -67,12 +67,12 @@ node skills/_shared/scripts/svg-autofix-cli.js \
   --out "${run_dir}/slides/slide-${slide_index}.svg"
 ```
 
-Build the `--tokens` JSON from the active style tokens you already loaded (`skills/_shared/references/styles/${style}.yaml`, or `brand-style.yaml` when present): pass at minimum `background` and `card_bg` (the surface colors the contrast fix compares text against). The CLI prints the number of fixes applied to stderr and the output path to stdout.
+Build the `--tokens` JSON from the active style tokens you already loaded (`skills/_shared/references/styles/${style}.yaml`, or `brand-style.yaml` when present): always pass `background` (the page surface the contrast fix compares **top-level** text against); `card_bg` may be passed too (reserved for future use, but the contrast pass does **not** use it). The CLI prints the number of fixes applied to stderr and the output path to stdout.
 
 The fixer is conservative — it **only applies changes that can only improve the slide**:
 - **Font floor:** raises any `font-size` below 14px (12px for `data-role="label"`/footnote text).
-- **Text contrast:** lightens (dark theme) or darkens (light theme) **top-level** text fills that fail the contrast floor against the worst-case surface. Nested text inside cards/badges and any `data-decorative` text is left untouched — Gemini's visual review handles those.
-- **Safe area:** clamps **only top-level, role-tagged** `data-role="title"` / `data-role="page-number"` elements (no `transform` ancestor) back inside the safe band. It never moves nested elements, so legitimate local coordinates inside transformed groups are preserved.
+- **Text contrast:** lightens (dark theme) or darkens (light theme) **top-level** text fills that fail the contrast floor against the page **`background`** token only. It does NOT guess a "worst-case" surface. Text it deliberately leaves to Gemini's visual review (which sees rendered pixels): nested text inside cards/badges/buttons (any `<g>`/`<a>`/`<switch>`/nested-`<svg>` ancestor), `data-decorative` text, and **top-level titles over a full-bleed `<image>`** (the M2.5 hero layout — those sit on the photo, not the page background).
+- **Safe area:** clamps **only top-level, role-tagged** `data-role="title"` / `data-role="page-number"` elements back inside the safe band. It skips any element with a `transform` ancestor **or its own `transform` attribute** (those use a custom coordinate system), so legitimate offset coordinates are preserved. It never moves nested elements.
 
 This is why the role tagging in SVG Requirements matters: untagged or nested title/page-number text is intentionally left alone. If Node is unavailable, skip this step and rely on the manual checks below.
 

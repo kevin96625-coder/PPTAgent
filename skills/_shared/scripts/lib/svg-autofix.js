@@ -1,20 +1,38 @@
 'use strict';
 const { contrastRatio, adjustToContrast, relLuminance } = require('./color-contrast');
 
-// Compute nesting-aware character ranges covered by any <g ...> ... </g> matching `gOpenRe`.
-// Returns { inRange(i) } where inRange is true iff index i sits strictly inside such a group.
-// We track ALL <g>/</g> for correct nesting, but only emit ranges for opens that match gOpenRe.
+// Compute nesting-aware character ranges covered by any container ... </container>
+// matching `gOpenRe`. Containers tracked: <g>, plus <a>, <switch>, and nested <svg>
+// — text inside ANY of these is "nested" and must bypass the top-level contrast /
+// safe-area passes (their effective surface / coordinate system is unknowable from
+// the markup). Returns { inRange(i) } true iff index i sits strictly inside such a
+// container. We track ALL container open/close for correct nesting, but only emit
+// ranges for opens whose tag matches gOpenRe.
 function groupRanges(s, gOpenRe) {
   const ranges = [];
   const stack = [];
-  const tokRe = /<g\b[^>]*>|<\/g>/g;
+  // Open tags for g/a/switch/svg (ignore self-closing "<.../>"), plus their closers.
+  const tokRe = /<(g|a|switch|svg)\b(?:[^>]*[^/>])?>|<\/(g|a|switch|svg)>/g;
+  let svgDepth = 0;
   let t;
   while ((t = tokRe.exec(s))) {
-    if (t[0] === '</g>') {
+    const isClose = t[0].startsWith('</');
+    const name = isClose ? t[2] : t[1];
+    if (isClose) {
       const o = stack.pop();
-      if (o && gOpenRe.test(o.tag)) ranges.push([o.index, t.index]);
+      // The outermost (root) <svg> document element must NOT count as a nesting
+      // container — otherwise every element would be "nested". Only nested <svg>
+      // (depth > 1) acts as a boundary.
+      if (o && o.tag !== '__root_svg__' && gOpenRe.test(o.tag)) ranges.push([o.index, t.index]);
+      if (name === 'svg') svgDepth--;
     } else {
-      stack.push({ index: t.index, tag: t[0] });
+      if (name === 'svg') {
+        svgDepth++;
+        // Mark the root svg so its range is never emitted.
+        stack.push({ index: t.index, tag: svgDepth === 1 ? '__root_svg__' : t[0] });
+      } else {
+        stack.push({ index: t.index, tag: t[0] });
+      }
     }
   }
   return { inRange: (i) => ranges.some(([a, b]) => i > a && i < b) };
@@ -49,7 +67,17 @@ function autofixSvg(svg, opts = {}) {
   // Top-level text genuinely sits on the page background, so we measure against it.
   const tok = opts.tokens || {};
   const bg = tok.background || tok.primary;
-  if (bg) {
+  // M2.5 hero layout: a full-bleed <image> (covers the 1280x720 canvas) means
+  // top-level text actually sits on the photo, NOT the page background token.
+  // Judging it against `background` mis-recolors correct hero titles (e.g. a white
+  // title on a dark photo under a light theme). Defer such slides to Gemini's
+  // visual review (same rationale as nested text) — skip the contrast pass entirely.
+  const hasFullBleedImage = [...out.matchAll(/<image\b[^>]*>/g)].some((im) => {
+    const wm = im[0].match(/\bwidth="([0-9.]+)"/);
+    const hm = im[0].match(/\bheight="([0-9.]+)"/);
+    return wm && hm && parseFloat(wm[1]) >= 1200 && parseFloat(hm[1]) >= 680;
+  });
+  if (bg && !hasFullBleedImage) {
     const dark = relLuminance(bg) < 0.5;
     const surface = bg;
     const dir = dark ? 'lighten' : 'darken';
@@ -114,7 +142,10 @@ function autofixSvg(svg, opts = {}) {
       rebuilt += out.slice(cursor, idx);
       cursor = idx + tag.length;
       let t2 = tag;
-      if (!inAnyG(idx)) {
+      // Skip text that carries its OWN transform: it positions itself in a custom
+      // coordinate system, so a raw y/x clamp would be wrong (clamping y->92 on a
+      // tag already translated would push it off its intended spot). I2 fix.
+      if (!inAnyG(idx) && !/\btransform=/.test(tag)) {
         const role = (tag.match(/data-role="([^"]+)"/) || [])[1];
         if (role === 'title' || role === 'page-number') {
           const ym = tag.match(/\by="(-?[0-9.]+)"/);
