@@ -21,3 +21,23 @@ test('font-size >= 14 untouched, no fixes, bytes stable', () => {
   assert.equal(out, svg);
   assert.equal(fixes.length, 0);
 });
+
+test('dark theme: low-contrast text fill is lightened to >=3:1', () => {
+  const svg = `<svg viewBox="0 0 1280 720"><text x="60" y="100" font-size="34" fill="#6366f1">T</text></svg>`;
+  const { svg: out, fixes } = autofixSvg(svg, { tokens: TOK });
+  const m = out.match(/fill="(#[0-9a-fA-F]{6})"/);
+  const { contrastRatio } = require('../scripts/lib/color-contrast');
+  assert.ok(contrastRatio(m[1], '#0f172a') >= 3, `fill ${m[1]}`);
+  assert.ok(fixes.some((f) => f.type === 'contrast'));
+});
+test('decorative + non-text fills are NOT touched', () => {
+  const svg = `<svg viewBox="0 0 1280 720"><rect fill="#6366f1"/><g data-decorative="true"><text fill="#6366f1" font-size="20">d</text></g></svg>`;
+  const { svg: out } = autofixSvg(svg, { tokens: TOK });
+  assert.ok((out.match(/#6366f1/g) || []).length === 2, 'rect + decorative text untouched');
+});
+test('passing fill unchanged', () => {
+  const svg = `<svg viewBox="0 0 1280 720"><text fill="#f1f5f9" font-size="20">x</text></svg>`;
+  const { svg: out, fixes } = autofixSvg(svg, { tokens: TOK });
+  assert.equal(out, svg);
+  assert.ok(!fixes.some((f) => f.type === 'contrast'));
+});
