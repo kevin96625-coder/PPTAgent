@@ -35,5 +35,19 @@ for (const f of files) {
     assert.deepEqual(ratio.buckets.dominant, ['background'], `${f}: buckets.dominant`);
     assert.ok(Array.isArray(ratio.buckets.secondary) && ratio.buckets.secondary.length >= 1, `${f}: buckets.secondary`);
     assert.deepEqual(ratio.buckets.accent, ['accent'], `${f}: buckets.accent`);
+
+    // Every token name listed under color_ratio.buckets MUST resolve to a key in
+    // this file's color_scheme — otherwise the analyzer silently bucket-misses
+    // (catches future card-bg vs card_bg drift).
+    const scheme = parseStyleBlock(text, 'color_scheme');
+    assert.ok(scheme, `${f}: missing color_scheme`);
+    for (const bucket of ['dominant', 'secondary', 'accent']) {
+      for (const tok of ratio.buckets[bucket]) {
+        assert.ok(
+          Object.prototype.hasOwnProperty.call(scheme, tok),
+          `${f}: color_ratio.buckets.${bucket} token "${tok}" missing from color_scheme`
+        );
+      }
+    }
   });
 }

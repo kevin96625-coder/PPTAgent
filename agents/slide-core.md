@@ -112,7 +112,7 @@ If the outline page for this slide has `asset.needed=true`: confirm the SVG cont
 
 ### 7. Typography & Color Budget (ADVISORY — never blocks, never auto-rewrites)
 
-Run the P3 advisory analyzer to record soft signals about font-size discipline and 60/30/10 color balance:
+Run the P3 advisory analyzer to record soft signals about font-size discipline and 60/30/10 color balance. This is a **standard step run every time** (not optional) — the CLI is cheap and always exits 0, so the hints are produced reliably for the orchestrator / reviewer to consult:
 
 ```bash
 node skills/_shared/scripts/type-color-cli.js \
