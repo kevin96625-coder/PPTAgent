@@ -1,5 +1,11 @@
 # 🔴 明天从这里开始 — Dogfood 实测发现 + 后续步骤(2026-06-07 晚)
 
+> **🟢 2026-06-08 更新(M2.5 已实现)**:本文件的"头号发现"已转化为里程碑 **M2.5 = 真实图片 + 视觉可用性门**,并已 **brainstorm → 审核 → spec → plan → 子代理 TDD 实现完(97 测试全过)**。
+> - 设计:`specs/2026-06-08-fusion-m2.5-real-images-design.md`;实现计划:`plans/2026-06-08-fusion-m2.5-real-images.md`;进度:`FUSION_ROADMAP.md`。
+> - 关键改动:slide-core 放开 `<image>`(原 `slide-core.md:97` 禁令已解)+ 图主导版式;research 阶段联网搜图/image-gen → `images/` + manifest;Phase 6 **样片预览门**(样片在前批量在后);review-core **资产页渲染→Gemini `--image` 看图** + 资产/专业度维度(堵 8.2 虚假高分);缺图标 `needs_real_image` 不画假物。
+> - **下一步**:① 用户跑一次真实 dogfood 验证产物质量;② **M2.6 = 确定性机械自修**(安全区/14px/对比度,首轮通过率 58%→≥85%)。
+> - 下面是 2026-06-07 的原始发现记录(已被上面落实,保留供追溯)。
+
 > **给明天 clear 后的自己/接手者**:这是单一入口。读完这份就知道今晚做了什么、发现了什么、下一步干什么。
 > 相关文档:活路线图 `FUSION_ROADMAP.md`、基线结果 `plans/2026-06-07-fusion-m2-baseline-results.md`、M2 spec/plan(`specs/`、`plans/`)。
 > 记忆指针:`fusion-mainline-progress`、`living-roadmap-jit-plans`。

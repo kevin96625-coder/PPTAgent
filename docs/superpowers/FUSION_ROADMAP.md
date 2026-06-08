@@ -27,18 +27,20 @@
 | P0 | 基线 + 源核实 | ✅ 完成 | 实测基线、核实 Akxan、修 Gemini bug | — |
 | M1 | `--stop-at` 灵活性 | ✅ 完成 | 分阶段停止 + 复用 --run-id 恢复 | P0 |
 | **M2** | **质量门控** | ✅ 代码完成 + 真实 dogfood 验证 | planning_validator + reviewer 页型上下文 + 方法论嵌入 | P0 |
-| **M2.5** | **🔴🔴 真实图片 + 视觉可用性门** | ⚪ **下一个(brainstorm+审核已定,spec 已写)** | 混合图源(品牌实体联网搜图 / 抽象走 image-gen)· slide-core 放开 `<image>`+图主导版式 · 视觉审查(渲染→Gemini 看图,资产维度)· 人工预览门(样片+候选图,样片在前批量在后) | M2(dogfood:产物不可用 + 审查虚假高分) |
-| **M2.6** | **机械自修(确定性)** | ⚪ 待办(紧随 M2.5) | slide-core 生成后确定性钳位:安全区/字号<14抬升/对比度修正 → 首轮通过率 58%→≥85% | M2.5 |
+| **M2.5** | **🔴🔴 真实图片 + 视觉可用性门** | ✅ **代码完成(2026-06-08,子代理 TDD,97 测试全过)** | 混合图源(品牌实体联网搜图 / 抽象走 image-gen)· slide-core 放开 `<image>`+图主导版式 · 视觉审查(渲染→Gemini 看图,资产维度)· 人工预览门(样片+候选图,样片在前批量在后)。**剩**:用户在插件会话跑一次真实 dogfood 验证产物质量。 | M2(dogfood:产物不可用 + 审查虚假高分) |
+| **M2.6** | **机械自修(确定性)** | ⚪ **下一个(紧随 M2.5)** | slide-core 生成后确定性钳位:安全区/字号<14抬升/对比度修正 → 首轮通过率 58%→≥85% | M2.5 |
 | P3 | 排版 + 配色 | ⚪ 待办 | 7 级字号阶梯 + 60/30/10 配色校验(14px floor 被 M2.6 覆盖) | M2.6 |
 | P4 | 资源注入 | ⚪ 待办 | Akxan 资源库 + Node assembler 按需注入 | M2;Akxan(已核实) |
 | P5 | PPTX 导出 | ⚪ 待办 | 方案 D MVP + 统一 ppt/export + 复用 storybook | bible-class Plan4 更佳 |
 | P6 | 智能配图 | ⚪ 待办 | 复用 skills/image-gen(Plan1 已完成) | Plan1 ✅ |
 | P7 | core 抽离 + MCP | ⚪ 待办 | core/(Node/TS)+ MCP server,大重构 | 最后做 |
 
-**当前推荐顺序**:M2 ✅ → **M2.5 真实图片+视觉门(下一个,spec 已定)** → **M2.6 机械自修** → P3 → P5(方案D MVP)→ P4 → P6 → P7。(B/F 收尾切片可选,插在任意处。)
+**当前推荐顺序**:M2 ✅ → **M2.5 真实图片+视觉门 ✅ 代码完成** → **M2.6 机械自修(下一个)** → P3 → P5(方案D MVP)→ P4 → P6 → P7。(B/F 收尾切片可选,插在任意处。)
 
-### 🔴🔴 M2.5 — 真实图片 + 视觉可用性门(下一个里程碑,brainstorm+审核已完成)
-**spec(单一来源)**:`docs/superpowers/specs/2026-06-08-fusion-m2.5-real-images-design.md`。
+### ✅ M2.5 — 真实图片 + 视觉可用性门(代码完成 2026-06-08)
+**spec/plan(单一来源)**:`specs/2026-06-08-fusion-m2.5-real-images-design.md` + `plans/2026-06-08-fusion-m2.5-real-images.md`。
+**已交付(子代理 TDD,14 任务,97 测试全过)**:① outline `asset` 字段 + planning-validator 校验;② 共享 `render-svg.js`(SVG→PNG,Chrome headless,优雅降级);③ `images-manifest.js` + `asset-plan.js`(needs_real_image 交叉引用);④ 尽力而为 `image-search.sh`(probe+降级+curl 超时,非关键路径);⑤ outline-architect `asset` 规范;⑥ slide-core 放开 `<image>` + 图主导版式配方(full-bleed/scrim/split)+ 缺图 flag(禁假物);⑦ research-core 取图接线(brand→搜图 / scene→image-gen → images-manifest);⑧ ppt.md Phase 6 样片预览门(样片在前、批量在后);⑨ review-core 资产页渲染→Gemini `--image` 看图 + 资产维度 + reason(数据页维持文本审查);⑩ gemini-cli reviewer 加资产维度;⑪ 交付期 images 拷进 output。
+**剩(用户)**:插件会话跑一次真实 dogfood(资产页主题,如 SU7),验证产物质量是否真的可用、reviewer 资产维度是否堵住虚假高分。
 **动因(看渲染产物后,头号)**:真实 12 页 deck **无法使用**(第 3 页手绘通用轿跑与 SU7 无关、全 deck 零真实图、Gemini 8.2/全过 = 审查盲区虚假信心)。复核发现:数据/Bento 页其实专业,问题**集中在需要真实视觉资产的页**。
 **已定方向(brainstorm 拍板)**:① 聚焦修复、**保留 Bento 引擎**;② 图源混合(品牌实体**联网搜图下载嵌入**、抽象/场景走 image-gen);③ 搜图在**资料调研阶段**;④ 图源可靠性靠**人工预览门兜底 + 自动搜图减负**(脆弱爬虫移出关键路径);⑤ 审查**双保险**(渲染→Gemini 看图的资产维度 + 早期人工预览门)。
 **审核发现并已纳入 spec 的 4 处硬补丁**:① 主 reviewer 现只看 SVG 文本看不见照片 → 必须渲染 PNG 走 `--image`(管线已存在);② 嵌入≠好看 → 加配图处理约束;③ slide-core 需图主导版式配方(非只放权限);④ 需 SVG→PNG 渲染小工具(预览门+审查共用)。
