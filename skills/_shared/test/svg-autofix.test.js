@@ -35,6 +35,14 @@ test('decorative + non-text fills are NOT touched', () => {
   const { svg: out } = autofixSvg(svg, { tokens: TOK });
   assert.ok((out.match(/#6366f1/g) || []).length === 2, 'rect + decorative text untouched');
 });
+test('nested text on a colored surface is NOT contrast-fixed (avoids false-positive regression)', () => {
+  // Dark text deliberately placed on a BRIGHT badge circle inside a group: lightening
+  // it would REDUCE contrast on its true surface. Real slide-06 false-positive (M2.6).
+  const svg = `<svg viewBox="0 0 1280 720"><g transform="translate(36,50)"><circle cx="22" cy="22" r="22" fill="#22d3ee"/><text x="22" y="30" font-size="20" fill="#0f172a">2</text></g></svg>`;
+  const { svg: out, fixes } = autofixSvg(svg, { tokens: TOK });
+  assert.match(out, /fill="#0f172a"/, 'nested dark badge text fill must survive');
+  assert.ok(!fixes.some((f) => f.type === 'contrast'), 'no contrast fix recorded for nested text');
+});
 test('passing fill unchanged', () => {
   const svg = `<svg viewBox="0 0 1280 720"><text fill="#f1f5f9" font-size="20">x</text></svg>`;
   const { svg: out, fixes } = autofixSvg(svg, { tokens: TOK });

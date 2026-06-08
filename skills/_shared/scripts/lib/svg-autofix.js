@@ -39,19 +39,26 @@ function autofixSvg(svg, opts = {}) {
     return tag.replace(/font-size="[0-9.]+"/, `font-size="${floor}"`);
   });
 
-  // --- text contrast: lighten/darken text fills that fail vs worst-case surface ---
+  // --- text contrast: lighten/darken text fills that fail vs the page background ---
+  // ONLY top-level <text>/<tspan> (no <g> ancestor) are touched. Nested text lives
+  // inside cards/badges/buttons with their own fills (plus transform/z-order), so the
+  // real surface behind it is unknowable from the markup — guessing a "worst-case"
+  // surface caused a "fix makes it worse" regression (dark text deliberately placed
+  // on a bright badge got lightened, reducing its true contrast). Nested text is
+  // instead covered by Gemini's visual review (M2.5), which sees rendered pixels.
+  // Top-level text genuinely sits on the page background, so we measure against it.
   const tok = opts.tokens || {};
   const bg = tok.background || tok.primary;
   if (bg) {
     const dark = relLuminance(bg) < 0.5;
-    const surfaces = [bg, tok.card_bg].filter(Boolean);
-    // worst case: darkest surface in dark theme, lightest in light theme
-    const sorted = surfaces.slice().sort((a, b) => relLuminance(a) - relLuminance(b));
-    const worst = sorted[dark ? 0 : sorted.length - 1];
+    const surface = bg;
     const dir = dark ? 'lighten' : 'darken';
     // nesting-aware decorative ranges: text whose tag start sits inside a
     // <g data-decorative="true"> ... </g> group must never be recolored.
     const { inRange: inDeco } = groupRanges(out, /data-decorative="true"/);
+    // Match ALL <g> groups so any group nesting disqualifies text from a contrast fix
+    // (mirrors the safe-area rule below — top-level only).
+    const { inRange: inAnyG } = groupRanges(out, /^/);
     // Rebuild manually from matchAll so each tag's true start offset is available.
     const matches = [...out.matchAll(/<(text|tspan)\b([^>]*)>/g)];
     let rebuilt = '';
@@ -63,23 +70,22 @@ function autofixSvg(svg, opts = {}) {
       rebuilt += out.slice(cursor, idx);
       cursor = idx + tag.length;
       let newTag = tag;
-      if (!inDeco(idx) && !/data-decorative="true"/.test(tag)) {
+      if (!inAnyG(idx) && !inDeco(idx) && !/data-decorative="true"/.test(tag)) {
         const fm = attrs.match(/fill="(#[0-9a-fA-F]{3,6})"/);
         if (fm) {
-          // WCAG AA: 4.5:1 for normal text. Large text (>=24px / data-role bigtext)
-          // may use the 3:1 large-text exception. NOTE (deviation from plan §3.1.2):
+          // WCAG AA: 4.5:1 for normal text. NOTE (deviation from plan §3.1.2):
           // the plan suggested a 3:1 floor for large text, but the Task-3 red-line
-          // test requires `#6366f1` (3.99:1 vs #0f172a, 3.27:1 vs #1e293b) to be
-          // fixed — both already exceed 3:1, so a 3:1 large-text floor can never
-          // satisfy that test. We therefore use 4.5:1 as the default and only grant
-          // the 3:1 exception to genuinely large display text (font-size >= 40).
-          // This is strictly safer (it can only raise contrast further) and does not
-          // weaken either safety red-line. The 34px title above lands at 4.5:1.
+          // test requires `#6366f1` (3.99:1 vs the #0f172a background) to be fixed —
+          // it already exceeds 3:1, so a 3:1 large-text floor can never satisfy that
+          // test. We therefore use 4.5:1 as the default and only grant the 3:1
+          // exception to genuinely large display text (font-size >= 40). This is
+          // strictly safer (it can only raise contrast further) and does not weaken
+          // either safety red-line. The 34px title above lands at 4.5:1.
           const fsm = attrs.match(/font-size="([0-9.]+)"/);
           const largeDisplay = fsm && parseFloat(fsm[1]) >= 40;
           const target = largeDisplay ? 3 : 4.5;
-          if (contrastRatio(fm[1], worst) < target) {
-            const fixed = adjustToContrast(fm[1], worst, target, dir);
+          if (contrastRatio(fm[1], surface) < target) {
+            const fixed = adjustToContrast(fm[1], surface, target, dir);
             if (fixed.toLowerCase() !== fm[1].toLowerCase()) {
               fixes.push({ type: 'contrast', detail: `${fm[1]}->${fixed}` });
               newTag = tag.replace(/fill="#[0-9a-fA-F]{3,6}"/, `fill="${fixed}"`);
