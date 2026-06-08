@@ -144,7 +144,7 @@ Then act on each list:
     --reference "${run_dir}/images/slide-MASTER.png" \  # ONLY if reference_of is set (keep the character on-model)
     --seed <NEW_seed>                                    # 新 seed,不复用原 seed
   ```
-  Append the review `reason` to the prompt file before the call (tell the generator what was wrong). The `--reference master` is kept for grouped pages so the redo stays consistent with the master, but the seed varies so we get a *different, better* sample. After regenerating, **re-render the slide PNG and re-review the page ONCE**. Write the incremented `redo_count` back into the manifest. **Cap is 2 rounds per page (`封顶 2`).**
+  Append the review `reason` to the prompt file before the call (tell the generator what was wrong). The `--reference master` is kept for grouped pages so the redo stays consistent with the master, but the seed varies so we get a *different, better* sample. After regenerating, **re-render the slide PNG and re-review the page ONCE**. Write the incremented `redo_count` back into the images-manifest **before** the next `planRedo` call so the cap is honored. (Defense in depth: image-gen keeps its own authoritative `redoCount` in its singular `image-manifest.json`, and the Phase 6 fix-round gate independently caps total rounds — so even if this write-back is missed, redo cannot loop unbounded.) **Cap is 2 rounds per page (`封顶 2`).**
 - **`plan.reshoot`** (brand-entity pages) → search ≠ generation, so do NOT auto-`--redo`. Send these **back to the Phase 6 preview gate** for a human to swap in / add a better official image.
 - **`plan.exhausted`** (scene pages that hit the cap) → **keep the placeholder + mark `needs_real_image`**; never hand-draw a fake. Delivery is not blocked (M2.5 behavior).
 

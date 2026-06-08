@@ -84,6 +84,23 @@ test('garbage fields degrade gracefully (no throw)', () => {
   assert.ok(Array.isArray(r.singletons));
 });
 
+test('mixed kind under one subject does NOT merge (no scene drop / no brand fabrication)', () => {
+  const o = outlineOf([
+    { index: 2, asset: { needed: true, kind: 'scene', subject: 'hero', query: 'x' } },
+    { index: 4, asset: { needed: true, kind: 'brand-entity', subject: 'hero', query: 'y' } },
+    { index: 6, asset: { needed: true, kind: 'scene', subject: 'hero', query: 'z' } },
+  ]);
+  const r = planReferences(o);
+  // the two scene pages group together; the lone brand-entity page stays a singleton.
+  assert.equal(r.groups.length, 1);
+  assert.equal(r.groups[0].kind, 'scene');
+  assert.equal(r.groups[0].master_page, 2);
+  assert.deepEqual(r.groups[0].derived_pages, [6]);
+  assert.equal(r.singletons.length, 1);
+  assert.equal(r.singletons[0].page, 4);
+  assert.equal(r.singletons[0].kind, 'brand-entity');
+});
+
 test('normalizeQuery strips punctuation/whitespace and lowercases', () => {
   assert.equal(normalizeQuery('  Hello, World! '), normalizeQuery('helloworld'));
 });
