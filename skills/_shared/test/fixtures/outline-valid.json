@@ -9,8 +9,8 @@
       "title": "Part 1",
       "key_message": "the one takeaway",
       "pages": [
-        { "index": 1, "title": "P1", "type": "content", "key_points": ["a", "b"], "layout_type": "two_column_symmetric", "visual_weight": "medium" },
-        { "index": 2, "title": "P2", "type": "data", "key_points": ["x"], "layout_type": "dashboard", "visual_weight": "high", "data_elements": [{ "type": "metric", "label": "Rev", "value": "$1B" }] },
+        { "index": 1, "title": "P1", "type": "content", "key_points": ["a", "b"], "layout_type": "two_column_symmetric", "visual_weight": "medium", "asset": { "needed": true, "kind": "brand-entity", "query": "示例产品 官方图", "caption": "产品外观" } },
+        { "index": 2, "title": "P2", "type": "data", "key_points": ["x"], "layout_type": "dashboard", "visual_weight": "high", "data_elements": [{ "type": "metric", "label": "Rev", "value": "$1B" }], "asset": { "needed": false, "kind": "none" } },
         { "index": 3, "title": "P3", "type": "quote", "key_points": [], "layout_type": "single_focus", "visual_weight": "low" }
       ]
     }

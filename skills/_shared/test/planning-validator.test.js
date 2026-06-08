@@ -188,3 +188,9 @@ test('asset: needed=false needs no query', () => {
 test('ASSET_KINDS exported vocabulary', () => {
   assert.deepEqual([...ASSET_KINDS].sort(), ['brand-entity', 'none', 'scene']);
 });
+
+test('valid fixture with asset fields passes cleanly', () => {
+  const outline = require('./fixtures/outline-valid.json');
+  const r = validateOutline(outline);
+  assert.equal(r.hard_errors.length, 0, JSON.stringify(r.hard_errors));
+});
