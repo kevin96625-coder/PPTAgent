@@ -45,6 +45,7 @@ Only proceed to LLM review if no Critical automated checks fail. (Step 6 is advi
 
 ## Execution
 1. Read the full SVG source from `${run_dir}/slides/slide-{slide_index}.svg`.
+   - **QA reference (P4).** Read `skills/_shared/references/principles/failure-modes.md` once for this review. It enumerates the 8 failure modes (underfill, support_collapse, payload_missing, source_overclaim, launch_drift, anchor_overexpansion, deck_rhythm_clone, decorative_substitution) and the **fix-priority order** (payload → support/context → anchor proportion → decoration last). When you raise issues or rank fix suggestions, follow that order — flag content-contract violations before aesthetic polish; never let a decoration tweak mask a missing-content failure.
 2. Read the active style YAML (e.g. `skills/_shared/references/styles/${style}.yaml`) to extract style tokens (colors, fonts, border-radius, gap).
 3. Read `${run_dir}/outline.json` to determine `SLIDE_TITLE`, `PAGE_TYPE`, and `VISUAL_WEIGHT` for this slide. Use the following lookup order:
    - If a `parts[].pages[]` entry has `index == slide_index`: use its `title` as `SLIDE_TITLE`, its `type` as `PAGE_TYPE`, and its `visual_weight` as `VISUAL_WEIGHT`.

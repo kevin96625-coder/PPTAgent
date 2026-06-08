@@ -1,10 +1,14 @@
 {
-  "version": "1.1.0",
-  "last_updated": "2026-03-23",
+  "version": "1.2.0",
+  "last_updated": "2026-06-08",
   "total_count": {
     "prompts": 4,
     "styles": 17,
-    "assets": 1
+    "assets": 1,
+    "principles": 2,
+    "blocks": 1,
+    "charts": 1,
+    "craft": 1
   },
   "resources": [
     {
@@ -204,6 +208,60 @@
       "keywords": ["preview", "html", "gallery", "present", "预览", "展示"],
       "description": "Interactive HTML preview page template with Gallery/Scroll/Present modes and keyboard navigation",
       "use_cases": ["delivery phase", "slide preview", "presentation viewing"]
+    },
+    {
+      "id": "principle-failure-modes",
+      "domain": "principle",
+      "name": "Failure Modes & Fix Priority",
+      "file_path": "principles/failure-modes.md",
+      "keywords": ["failure", "qa", "review", "fix", "underfill", "decorative", "失败模式", "修复", "质检"],
+      "description": "8 design failure modes + fix-priority order, remapped to this repo's outline/SVG; for review-core/QA",
+      "use_cases": ["slide QA", "review fix prioritization", "content density check"]
+    },
+    {
+      "id": "principle-color-psychology",
+      "domain": "principle",
+      "name": "Color Psychology",
+      "file_path": "color-psychology.md",
+      "keywords": ["color", "60/30/10", "contrast", "emotion", "accent", "color_ratio", "色彩", "配色", "对比度", "cover", "section"],
+      "description": "60/30/10 color ratio + color emotion + contrast safety, tied to P3 color_ratio budget",
+      "use_cases": ["cover/section pages", "color mood calibration", "palette decisions"]
+    },
+    {
+      "id": "reference-design-cheatsheet",
+      "domain": "craft",
+      "name": "Design Cheatsheet (outline fields)",
+      "file_path": "design-cheatsheet.md",
+      "keywords": ["crap", "contrast", "alignment", "hierarchy", "cheatsheet", "layout_type", "data_elements", "visual_weight", "速查", "层级", "密度"],
+      "description": "CRAP guardrail mapped to this repo's outline.json fields; field-level correction handbook for content-core/slide-core",
+      "use_cases": ["outline planning", "field-level design correction", "deck rhythm"]
+    },
+    {
+      "id": "block-blocks",
+      "domain": "block",
+      "name": "Composite Blocks (SVG)",
+      "file_path": "blocks.md",
+      "keywords": ["blocks", "card", "timeline", "diagram", "quote", "comparison", "people", "image", "matrix", "card_style", "组件", "对比", "金句"],
+      "description": "Component design souls (card-styles, timeline, diagram, quote, comparison, people, image_hero, matrix) with pure-SVG landing hints",
+      "use_cases": ["comparison pages", "process/timeline pages", "quote pages", "image pages"]
+    },
+    {
+      "id": "chart-charts-catalog",
+      "domain": "chart",
+      "name": "Charts Catalog (SVG)",
+      "file_path": "charts-catalog.md",
+      "keywords": ["chart", "metric", "data", "radar", "funnel", "gauge", "waffle", "selection", "图表", "数据", "雷达", "漏斗", "仪表盘"],
+      "description": "Chart taxonomy + selection matrix; radar/funnel/gauge/waffle as minimal pure-SVG skeletons (cross-refs svg-generator)",
+      "use_cases": ["data pages", "chart type selection", "metric visualization"]
+    },
+    {
+      "id": "craft-layout-craft",
+      "domain": "craft",
+      "name": "Layout Craft (gravity field)",
+      "file_path": "layout-craft.md",
+      "keywords": ["layout", "gravity", "composition", "variation", "craft", "cover", "section", "end", "hero", "版式", "重力场", "构图"],
+      "description": "Gravity-field philosophy + variation craft deepening the existing 10 layout_type values; adds no enum, touches no validator",
+      "use_cases": ["cover/section/end pages", "layout rendering craft", "deck variation"]
     }
   ]
 }

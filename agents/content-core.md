@@ -39,6 +39,7 @@ Handle content authoring: structured outline creation using Pyramid Principle an
 3. Route by `mode`:
    - `outline`:
      - Read the Pyramid Principle prompt from `skills/_shared/references/prompts/outline-architect.md` (relative to plugin root).
+     - **Design-thinking references (P4, optional).** While planning content density and choosing each page's `type`/`layout_type`/`data_elements`, you MAY read `skills/_shared/references/design-cheatsheet.md` (CRAP guardrail mapped to this repo's outline fields — field-level correction for hierarchy/density/data honesty) and `skills/_shared/references/principles/failure-modes.md` (the 8 failure modes, to design pages that don't underfill or collapse support). These are advisory design aids, not gates; skip them if the outline is straightforward.
      - Check `${run_dir}/requirements.md` for presentation purpose. Apply the Framework Selection heuristic from `outline-architect.md` to choose the optimal structural framework. Default to Pyramid Principle if purpose is unclear.
      - Apply the methodology: 结论先行, 以上统下, 归类分组, 逻辑递进.
      - Respect the page range from `input.md` (e.g. `--pages=10-15`). Ensure `total_pages` in the generated outline falls within the specified range. If content naturally requires fewer or more pages, stay within ±1 of the range boundaries.
