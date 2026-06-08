@@ -9,11 +9,22 @@
 //
 // Selection rules (deterministic, keyword + page-type), spec §2:
 //   - data_elements has chart/metric/data  → charts-catalog + design-cheatsheet
-//   - type cover/section/end               → layout-craft
-//   - type comparison/process/timeline     → blocks
-//   - type quote/image                     → blocks
-//   - any page (low priority)              → color-psychology
+//   - special slides cover/end (passed by   → layout-craft
+//     the agent as --type, not in pages[])
+//   - body page with a hero-ish layout_type → layout-craft
+//     (single_focus / hero_grid / full_bleed: one dominant element where the
+//      gravity-field composition craft matters most)
+//   - type comparison/process               → blocks
+//   - type quote/image                      → blocks
+//   - any page (low priority)               → color-psychology
 // Then: dedupe, sort by rule priority (stable), cap (default 4).
+//
+// NOTE on the page-type vocabulary: the real pages[].type enum is
+// content|data|comparison|process|quote|image (planning-validator PAGE_TYPES).
+// `cover`/`end` are NOT page types — they are the outline's top-level cover /
+// end_page slides, for which the agent invokes the selector with an explicit
+// `--type cover` / `--type end`. `timeline` is a layout_type, not a page type
+// (and process pages already route to blocks), so it is not matched on `type`.
 
 // Reference IDs as registered in index.json.
 const REF = {
@@ -57,7 +68,13 @@ function selectReferences(page, opts) {
 
     const p = page && typeof page === 'object' ? page : {};
     const type = String(p.type || '').toLowerCase();
+    const layoutType = String(p.layout_type || '').toLowerCase();
     const dtypes = elementTypes(p.data_elements);
+
+    // Hero-ish layout_type values (subset of the canonical 10 LAYOUT_TYPES)
+    // where a single dominant element drives the composition — the gravity-field
+    // craft in layout-craft.md is most relevant for these.
+    const HERO_LAYOUTS = new Set(['single_focus', 'hero_grid', 'full_bleed']);
 
     // Candidate list: [id, priority, reason]. Lower priority sorts first.
     const candidates = [];
@@ -71,12 +88,17 @@ function selectReferences(page, opts) {
       add(REF.CHEATSHEET, 2, 'data page → field-level design cheatsheet (data honesty, hierarchy)');
     }
 
-    if (type === 'cover' || type === 'section' || type === 'end') {
-      add(REF.LAYOUT, 1, 'cover/section/end → layout-craft (gravity-field rendering for the 10 layout_type)');
+    // Special slides (cover / end_page) are passed by the agent as explicit
+    // --type cover / --type end (they are not in pages[]); a body page earns
+    // layout-craft when its layout_type is hero-ish.
+    if (type === 'cover' || type === 'end') {
+      add(REF.LAYOUT, 1, 'cover/end slide → layout-craft (gravity-field rendering for the 10 layout_type)');
+    } else if (HERO_LAYOUTS.has(layoutType)) {
+      add(REF.LAYOUT, 1, `hero-ish layout_type "${layoutType}" → layout-craft (gravity-field composition)`);
     }
 
-    if (type === 'comparison' || type === 'process' || type === 'timeline') {
-      add(REF.BLOCKS, 1, 'comparison/process/timeline → blocks (matching composite component soul)');
+    if (type === 'comparison' || type === 'process') {
+      add(REF.BLOCKS, 1, 'comparison/process → blocks (matching composite component soul)');
     }
     if (type === 'quote' || type === 'image') {
       add(REF.BLOCKS, 2, 'quote/image → blocks (quote / image_hero component soul)');

@@ -20,12 +20,59 @@ test('case 1: data page (chart/metric data_elements) → charts-catalog + design
   assert.ok(Array.isArray(reason) && reason.length === ids.length, 'reason per id');
 });
 
-test('case 2: cover page → layout-craft', () => {
+test('case 2: cover slide (--type cover) → layout-craft', () => {
   const { ids } = selectReferences(
     { type: 'cover', layout_type: 'full_bleed', data_elements: [], has_asset: true },
     { index: REAL_INDEX }
   );
   assert.ok(ids.includes('craft-layout-craft'), 'cover should pull layout-craft');
+});
+
+test('case 2b: end slide (--type end) → layout-craft', () => {
+  const { ids } = selectReferences(
+    { type: 'end', layout_type: 'single_focus', data_elements: [], has_asset: false },
+    { index: REAL_INDEX }
+  );
+  assert.ok(ids.includes('craft-layout-craft'), 'end slide should pull layout-craft');
+});
+
+test('case 2c: body page with a hero-ish layout_type → layout-craft', () => {
+  for (const layout_type of ['single_focus', 'hero_grid', 'full_bleed']) {
+    const { ids } = selectReferences(
+      { type: 'content', layout_type, data_elements: [], has_asset: false },
+      { index: REAL_INDEX }
+    );
+    assert.ok(
+      ids.includes('craft-layout-craft'),
+      `body content page with layout_type=${layout_type} should pull layout-craft`
+    );
+  }
+});
+
+test('case 2d: body page with a non-hero layout_type does NOT pull layout-craft', () => {
+  const { ids } = selectReferences(
+    { type: 'content', layout_type: 'two_column_symmetric', data_elements: [], has_asset: false },
+    { index: REAL_INDEX }
+  );
+  assert.ok(!ids.includes('craft-layout-craft'), 'plain two-column content page should not pull layout-craft');
+});
+
+test('case 2e: removed routing — "section" type and "timeline" type are NOT real page types', () => {
+  // `section` was never a real pages[].type, and `timeline` is a layout_type, not
+  // a page type. Neither should trigger any page-type-specific reference on its own
+  // (a bare `section` type with a plain layout pulls nothing but optional color).
+  const section = selectReferences(
+    { type: 'section', layout_type: 'two_column_symmetric', data_elements: [], has_asset: false },
+    { index: REAL_INDEX }
+  );
+  assert.ok(!section.ids.includes('craft-layout-craft'), 'bogus "section" type must not route to layout-craft');
+
+  // `timeline` as a page TYPE must not route to blocks (only process/comparison do).
+  const timelineType = selectReferences(
+    { type: 'timeline', layout_type: 'two_column_symmetric', data_elements: [], has_asset: false },
+    { index: REAL_INDEX }
+  );
+  assert.ok(!timelineType.ids.includes('block-blocks'), 'bogus "timeline" page type must not route to blocks');
 });
 
 test('case 3: comparison page → blocks', () => {

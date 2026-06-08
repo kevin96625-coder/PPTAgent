@@ -99,8 +99,8 @@
   <!-- 底弧(半圆,A 命令画 180°) -->
   <path d="M -120,0 A 120,120 0 0 1 120,0" fill="none"
     stroke="${card_bg}" stroke-width="18" stroke-linecap="round"/>
-  <!-- 值弧:按 value/max 计算终点角(此处 ~78% → 角度 ~140°) -->
-  <path d="M -120,0 A 120,120 0 0 1 64,-101" fill="none"
+  <!-- 值弧:按 value/max 计算终点角(此处 78% → 角度 180−0.78·180=39.6°,终点 (120cos39.6°, −120sin39.6°)≈(92,−76)) -->
+  <path d="M -120,0 A 120,120 0 0 1 92,-76" fill="none"
     stroke="${accent}" stroke-width="18" stroke-linecap="round"/>
   <!-- 中心读数 -->
   <text x="0" y="-10" text-anchor="middle" font-size="40" font-weight="bold" fill="${text}">78</text>

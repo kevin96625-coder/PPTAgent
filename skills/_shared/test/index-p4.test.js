@@ -59,7 +59,42 @@ test('total_count reflects the new P4 domains', () => {
   assert.strictEqual(tc.principles, 2);
   assert.strictEqual(tc.blocks, 1);
   assert.strictEqual(tc.charts, 1);
-  assert.strictEqual(tc.craft, 1);
+  assert.strictEqual(tc.craft, 2);
+});
+
+// total_count keys are pluralized aliases of the resource `domain` field
+// (prompt→prompts, style→styles, asset→assets, principle→principles,
+// block→blocks, chart→charts, craft→craft). For EVERY total_count key, the
+// declared count must equal the actual number of resources with that domain —
+// computed from resources[] so the count can never silently drift again.
+test('total_count for every domain equals the actual resource count (no drift)', () => {
+  // Derive the singular domain for a total_count key by matching it against the
+  // distinct domains present in resources[] (key === domain or key === domain+'s').
+  const actualByDomain = {};
+  for (const r of INDEX.resources) {
+    actualByDomain[r.domain] = (actualByDomain[r.domain] || 0) + 1;
+  }
+  for (const [key, declared] of Object.entries(INDEX.total_count)) {
+    const domain = actualByDomain[key] != null
+      ? key
+      : (key.endsWith('s') && actualByDomain[key.slice(0, -1)] != null ? key.slice(0, -1) : null);
+    assert.ok(domain != null, `total_count key "${key}" maps to no resource domain`);
+    assert.strictEqual(
+      declared,
+      actualByDomain[domain],
+      `total_count.${key} (${declared}) != resources with domain "${domain}" (${actualByDomain[domain]})`
+    );
+  }
+  // And the reverse: every domain present in resources[] is declared in total_count.
+  for (const domain of Object.keys(actualByDomain)) {
+    const present = domain in INDEX.total_count || (`${domain}s`) in INDEX.total_count;
+    assert.ok(present, `domain "${domain}" has resources but no total_count entry`);
+  }
+});
+
+test('no duplicate resource ids', () => {
+  const ids = INDEX.resources.map((r) => r.id);
+  assert.strictEqual(new Set(ids).size, ids.length, 'resource ids must be unique');
 });
 
 test('every resource file_path in the index exists (no dangling entries)', () => {

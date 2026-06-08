@@ -38,7 +38,7 @@
 | **outline — 虚境描边** | 若有若无的气泡膜,暗示边界不制造隔阂 | `<rect fill="none" stroke="${accent}" stroke-opacity="0.2">` |
 | **accent — 灼焰核心** | 唯一燃烧的核心,反色文字 | `<rect fill="${accent}">` + 反色 `<text fill="#fff">`,一页最多 1 个 |
 | **glass — 雾中幻影** | 半透明浮冰,底图若隐若现 | **不要用 CSS 毛玻璃滤镜**(本管线无 HTML/CSS);改用低透明叠色:`<rect fill="${card_bg}" opacity="0.35">` 叠在背景上 |
-| **elevated — 悬崖浮岩** | 用阴影制造 Z 轴凸起 | `<rect fill="${card_bg}" filter="url(#shadow)">` + 微上移偏移,一页最多 1 个 |
+| **elevated — 悬崖浮岩** | 用阴影制造 Z 轴凸起 | `<rect fill="${card_bg}" filter="url(#card-shadow)">` + 微上移偏移,一页最多 1 个 |
 
 **推荐灵动组合**(张力强 → 柔和):`accent`+`transparent`+`filled` / `elevated`+`outline`+`transparent` / `filled`+`outline`(最低限度层次)。
 
@@ -64,7 +64,7 @@
 - **何时用**:权威引用 / 颠覆性观点(`type=quote`)。一页最多 1 个。
 - **设计灵魂**:引文 28-36px、`font-weight:500`、行高 1.6;超大装饰引号(80-120px,极低透明度 0.1-0.15)像水印衬在文字后;金句周围大量留白——留白就是"请静听"的无声邀请;来源信息明显弱于引文。
 - **变奏**:左侧竖线式(3px accent 竖线 + 下方来源,庄重)/ 居中悬浮式(诗意)/ 偏心张力式(不对称灵动)。
-- **SVG 落地**:大引号 `<text font-size="110" fill="${accent}" opacity="0.12">"</text>`;引文 `<text font-size="32">`;竖线 `<rect width="3" fill="${accent}">`;头像 `<circle>` 裁切 + `<image clip-path>`。推荐 transparent。
+- **SVG 落地**:大引号 `<text font-size="110" fill="${accent}" opacity="0.12">"</text>`;引文 `<text font-size="32">`;竖线 `<rect width="3" fill="${accent}">`;头像用 `<clipPath id="avatar"><circle cx="40" cy="40" r="40"/></clipPath>` + `<image href="images/slide-NN.jpg" clip-path="url(#avatar)"/>`。推荐 transparent。
 
 ---
 
