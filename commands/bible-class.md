@@ -295,76 +295,29 @@ Store the character description JSON in a shell variable or temp file:
 CHARACTER_DESC_JSON='<JSON_STRING>'
 ```
 
-### Step 3.3 — Invoke bible-image-core for Phase 3
+### Step 3.3 — Invoke bible-image-core (Single Call for Phase 3 + 4)
 
-Call the `bible-image-core` agent via `Task` to execute Phase 3 (style lock + master reference generation):
+Call the `bible-image-core` agent via `Task`. This single invocation will internally complete:
+- Phase 3: style lock + master reference generation + master hard stop (agent uses `AskUserQuestion` directly)
+- Phase 4: per-scene generation loop with character consistency (all scenes use `--reference` to master)
 
 ```text
 Task(subagent_type="ppt-agent:bible-image-core",
-     prompt="run_dir=${RUN_DIR} preset=${STYLE_PRESET} character_desc=${CHARACTER_DESC_JSON} phase=3")
+     prompt="run_dir=${RUN_DIR} preset=${STYLE_PRESET} character_desc=${CHARACTER_DESC_JSON}")
 ```
 
-The agent will:
+**What the agent does internally (no second call needed):**
+
+**Phase 3 execution inside agent:**
 1. Call `skills/bible-class/scripts/write_style_lock.js` to write `style.lock.json` + sidecar `.txt` files.
 2. Write `${RUN_DIR}/briefs/master.txt` with a master-reference brief (derived from `character_desc`).
 3. Generate `${RUN_DIR}/master/master-reference.png` via `skills/image-gen/scripts/generate.js` (NO `--reference` flag for master).
-4. Present the master image to the teacher for approval (via `AskUserQuestion`).
+4. **HARD STOP**: Agent uses `AskUserQuestion` to present master image to teacher for approval/redo. Teacher approves/redos directly with agent (no command-layer relay needed).
+5. On approval: agent updates `style.lock.json` with `"master_reference": "master/master-reference.png"`.
 
-**Expected agent interaction:**
-- Agent sends `ready` → indicates style.lock written.
-- Agent sends `master-generated` → master image ready for review.
-- Agent awaits teacher approval via the lead orchestrator (you relay approval/redo decision via follow-up `SendMessage`).
-
-### Step 3.4 — Master Approval (MANDATORY Hard Stop)
-
-The `bible-image-core` agent will have presented the master image to the teacher. Wait for the agent's final signal:
-- `master-approved` → proceed to Phase 4.
-- `master-redo-N` → agent re-generated master N times; if N ≥ 3, agent will report exhaustion and stop. In that case, inform the teacher: "主角色参考图生成已达重试上限。请检查风格/角色描述是否合理，或稍后重试。"
-
-If approved, the agent writes `"master_reference": "master/master-reference.png"` to `style.lock.json` and completes Phase 3.
-
-### Step 3.5 — Print Phase 3 completion summary
-
-```
-✅ Phase 3 完成：风格锁定 + 主角色参考图已批准
-🎨 风格：${STYLE_PRESET}
-👤 角色：${CHARACTER_DESC_JSON.character_name}
-📄 风格锁：${RUN_DIR}/style.lock.json
-🖼️  主参考图：${RUN_DIR}/master/master-reference.png
----
-下一步：Phase 4 — 逐场景生成插图（所有场景将使用此主参考图确保角色一致）
-```
-
-Proceed to Phase 4 immediately (no user intervention required between Phase 3 and 4).
-
----
-
-## Phase 4: Per-Scene Image Generation (Character Consistency via --reference)
-
-**Purpose:** Generate one illustration per scene from `lesson-outline.json`, ensuring character consistency by passing `--reference ${RUN_DIR}/master/master-reference.png` to EVERY scene generation.
-
-**Inputs consumed:**
-- `${RUN_DIR}/lesson-outline.json` → `teaching.scenes[]` (each scene has `index` and `image_brief`)
-- `${RUN_DIR}/style.lock.json` + `.identity.txt` + `.style.txt`
-- `${RUN_DIR}/master/master-reference.png` (locked in Phase 3)
-
-**Outputs produced:**
-- `${RUN_DIR}/images/scene-{NN}.png` (one per scene, NN = zero-padded index)
-- `${RUN_DIR}/bible-reviews/review-{NN}.md` (theological review per scene)
-- `${RUN_DIR}/image-manifest.json` (updated by `generate.js` after each call)
-
-### Step 4.1 — Invoke bible-image-core for Phase 4
-
-Call the `bible-image-core` agent via `Task` to execute Phase 4 (per-scene generation loop):
-
-```text
-Task(subagent_type="ppt-agent:bible-image-core",
-     prompt="run_dir=${RUN_DIR} phase=4")
-```
-
-The agent will:
-1. Read `lesson-outline.json` and extract `teaching.scenes[]`.
-2. For each scene (sorted by `index`):
+**Phase 4 execution inside agent (after master approved):**
+6. Read `lesson-outline.json` and extract `teaching.scenes[]`.
+7. For each scene (sorted by `index`):
    a. Write `${RUN_DIR}/briefs/scene-{NN}.txt` from `image_brief`.
    b. Call `skills/image-gen/scripts/generate.js` with:
       ```
@@ -377,23 +330,47 @@ The agent will:
       --reference ${RUN_DIR}/master/master-reference.png    ← KEY: ensures character consistency
       ```
    c. Call `review-core` agent (mode=bible_review) to check for anachronisms, theological accuracy, reverence.
-   d. Present each scene image + review to the teacher for approval.
+   d. Present each scene image + review to teacher for approval (agent uses `AskUserQuestion` directly).
    e. If teacher requests redo: re-run generation with `--redo` flag (up to 3 retries per scene via `redo_state.js`).
    f. If scene exhausts retries or backend fails: write a placeholder entry in `image-manifest.json` with `"status": "missing"`, do NOT fake the image.
 
 **Expected agent signals:**
-- `scene-{NN}-generated` → scene image ready for review.
-- `scene-{NN}-approved` → teacher approved, moving to next scene.
-- `scene-{NN}-missing` → scene failed after retries; placeholder written.
-- `phase-4-complete` → all scenes processed (mix of approved + missing allowed).
+- `heartbeat` — at the start of Phase 3, Phase 4, and each scene (progress tracking).
+- `bible-image-core-done` — final signal when all scenes processed. Includes JSON payload:
+  ```json
+  {
+    "phase": "bible-image-core-done",
+    "master_reference": "<RD>/master/master-reference.png",
+    "scene_count": N,
+    "approved_count": M,
+    "skipped_count": K,
+    "manifest_path": "<RD>/image-manifest.json"
+  }
+  ```
 
-### Step 4.2 — Wait for Phase 4 completion
+### Step 3.4 — Wait for bible-image-core-done
 
-The agent will process all scenes autonomously with human-in-the-loop approval. Wait for the `phase-4-complete` signal.
+Wait for the agent to send `bible-image-core-done` signal. This indicates:
+- Master reference approved and locked in `style.lock.json`.
+- All scenes processed (mix of approved + missing allowed).
+- `image-manifest.json` written with status for every scene.
 
-If the agent reports errors (e.g., `lesson-outline.json` missing `teaching.scenes[]`, or all scenes failed), surface the error to the teacher and stop.
+If the agent sends `error` signal, surface the error message to the teacher and stop.
 
-### Step 4.3 — Verify image manifest
+---
+
+## Phase 4: Verify Scene Images (Post bible-image-core)
+
+**Purpose:** After the single `bible-image-core` call completes (which internally ran Phase 3 master + Phase 4 scenes), verify the image artifacts and count successful vs. missing scenes before proceeding to PPT assembly.
+
+**Inputs consumed (produced by bible-image-core):**
+- `${RUN_DIR}/style.lock.json` (with locked `master_reference`)
+- `${RUN_DIR}/master/master-reference.png` (approved master)
+- `${RUN_DIR}/images/scene-{NN}.png` (one per approved scene)
+- `${RUN_DIR}/bible-reviews/review-{NN}.md` (theological reviews)
+- `${RUN_DIR}/image-manifest.json` (status for every scene: approved or missing)
+
+### Step 4.1 — Verify image manifest
 
 After Phase 4 completes, check `${RUN_DIR}/image-manifest.json` to count successful vs. missing scenes:
 
@@ -424,7 +401,7 @@ If `GENERATED_SCENES == 0`, stop and report:
    3. ${RUN_DIR}/image-manifest.json 中的错误日志
 ```
 
-### Step 4.4 — Print Phase 4 completion summary
+### Step 4.2 — Print Phase 4 completion summary
 
 If at least one scene was generated successfully:
 
@@ -443,7 +420,7 @@ Proceed to Phase 5.
 
 ---
 
-### Phase 5 — PPT Assembly
+## Phase 5 — PPT Assembly
 
 **Inputs consumed:**
 - `<RD>/lesson-outline.json` — provides `title`, `scripture_ref`, `teaching.scenes[]`, `memory_verse`
@@ -511,7 +488,7 @@ Any `fail` entries with severity `high` mean the narration text for that scene i
 
 ---
 
-### Phase 6 — Delivery
+## Phase 6 — Delivery
 
 **Step 6.1 — Copy images to output**
 
