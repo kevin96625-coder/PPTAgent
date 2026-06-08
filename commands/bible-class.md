@@ -100,8 +100,7 @@ teacher approval before any images are generated.
    ```
 
 4. **Resume detection** (when `--run-id` is provided):
-   - `lesson-outline.json` with `"approved": true` → skip to Phase 3 (Plans 3–4, not yet
-     implemented; inform user and stop).
+   - `lesson-outline.json` with `"approved": true` → skip to Phase 3 (style selection + image generation).
    - `lesson-outline.json` with `"approved": false` → re-enter Phase 2 Hard Stop.
    - `lesson-source.json` exists but no `lesson-outline.json` → resume at Phase 2.
    - Nothing exists → start from Phase 1.
@@ -206,6 +205,243 @@ teacher approval before any images are generated.
    下一步：运行 /bible-class --run-id=${CHANGE_ID} 继续（Phase 3: 风格选择 + 主体生图）
    恢复命令：/bible-class --run-id=${CHANGE_ID}
    ```
+
+## Phase 3: Style Selection + Master Reference (Hard Stop)
+
+**Purpose:** Lock the visual style and generate the master character reference image (定妆照). This master reference will be used as `--reference` input for ALL scene images in Phase 4 to ensure cross-scene character consistency.
+
+**Inputs consumed:**
+- `${RUN_DIR}/lesson-outline.json` (approved, contains `teaching.scenes[]`)
+- `${RUN_DIR}/lesson-source.json` (for theological context)
+
+**Outputs produced:**
+- `${RUN_DIR}/style.lock.json`
+- `${RUN_DIR}/style.lock.identity.txt`
+- `${RUN_DIR}/style.lock.style.txt`
+- `${RUN_DIR}/master/master-reference.png` (after approval)
+
+### Step 3.1 — Style Selection
+
+Present the 4 available child-friendly styles to the teacher using `AskUserQuestion`:
+
+```
+🎨 请选择课程插图风格：
+
+1️⃣ **扁平卡通** (Flat Cartoon) — 默认推荐
+   明亮、圆润的2D卡通风格，粗黑边线，饱和色彩
+   适合：大多数圣经故事，神学上最易控制
+
+2️⃣ **水彩绘本** (Watercolor Storybook)
+   柔和的水彩插画，温暖笔触，宁静叙事氛围
+   适合：温柔或沉思性的场景
+
+3️⃣ **皮克斯3D** (Disney 3D)
+   友好的3D动画风格，柔和光线，高视觉冲击力
+   适合：活泼场景，需谨慎控制神学表达
+
+4️⃣ **温暖手绘** (Warm Handdrawn)
+   蜡笔和粗马克笔手绘风格，活力四射，欢快氛围
+   适合：欢乐或积极的场景
+
+---
+请输入数字 (1-4)，或回复风格英文名。不输入则默认选择 1 (Flat Cartoon)。
+```
+
+Map the user's choice to the preset name:
+- `1` or `flat-cartoon` → `flat-cartoon`
+- `2` or `watercolor-storybook` → `watercolor-storybook`
+- `3` or `disney-3d` or `pixar-3d` → `disney-3d`
+- `4` or `warm-handdrawn` → `warm-handdrawn`
+- Empty or invalid → default to `flat-cartoon`
+
+Store the choice in a shell variable: `STYLE_PRESET=<preset>`
+
+### Step 3.2 — Character Description
+
+Ask the teacher to describe the main character (usually Jesus, but could be another biblical figure):
+
+```
+👤 请描述主要圣经角色（通常是耶稣）：
+
+我需要以下信息来生成角色定妆照：
+- **角色名称**：如"耶稣"
+- **外观年龄**：如"30岁左右"
+- **民族/地域**：如"1世纪犹太/近东"
+- **头发**：如"棕色齐肩波浪卷发，短胡须"
+- **服装**：如"米色/奶油色及踝长袍，棕色皮凉鞋"
+- **配色方案**：如"温暖米色、奶油色、棕色、柔和蓝"
+
+---
+可以直接回复"默认耶稣"使用标准描述，或逐项提供自定义描述。
+```
+
+If the user replies "默认耶稣" or similar, use the default character description:
+
+```json
+{
+  "character_name": "耶稣",
+  "age_appearance": "30岁左右",
+  "ethnicity": "1世纪犹太/近东地区",
+  "hair_description": "棕色齐肩波浪卷发，短胡须",
+  "clothing": "米色/奶油色及踝长袍，棕色皮革凉鞋",
+  "palette": "温暖米色、奶油色、棕色、柔和蓝"
+}
+```
+
+Otherwise, parse the user's custom description into the same JSON structure. If any required field is missing, ask for it explicitly.
+
+Store the character description JSON in a shell variable or temp file:
+```bash
+CHARACTER_DESC_JSON='<JSON_STRING>'
+```
+
+### Step 3.3 — Invoke bible-image-core for Phase 3
+
+Call the `bible-image-core` agent via `Task` to execute Phase 3 (style lock + master reference generation):
+
+```text
+Task(subagent_type="ppt-agent:bible-image-core",
+     prompt="run_dir=${RUN_DIR} preset=${STYLE_PRESET} character_desc=${CHARACTER_DESC_JSON} phase=3")
+```
+
+The agent will:
+1. Call `skills/bible-class/scripts/write_style_lock.js` to write `style.lock.json` + sidecar `.txt` files.
+2. Write `${RUN_DIR}/briefs/master.txt` with a master-reference brief (derived from `character_desc`).
+3. Generate `${RUN_DIR}/master/master-reference.png` via `skills/image-gen/scripts/generate.js` (NO `--reference` flag for master).
+4. Present the master image to the teacher for approval (via `AskUserQuestion`).
+
+**Expected agent interaction:**
+- Agent sends `ready` → indicates style.lock written.
+- Agent sends `master-generated` → master image ready for review.
+- Agent awaits teacher approval via the lead orchestrator (you relay approval/redo decision via follow-up `SendMessage`).
+
+### Step 3.4 — Master Approval (MANDATORY Hard Stop)
+
+The `bible-image-core` agent will have presented the master image to the teacher. Wait for the agent's final signal:
+- `master-approved` → proceed to Phase 4.
+- `master-redo-N` → agent re-generated master N times; if N ≥ 3, agent will report exhaustion and stop. In that case, inform the teacher: "主角色参考图生成已达重试上限。请检查风格/角色描述是否合理，或稍后重试。"
+
+If approved, the agent writes `"master_reference": "master/master-reference.png"` to `style.lock.json` and completes Phase 3.
+
+### Step 3.5 — Print Phase 3 completion summary
+
+```
+✅ Phase 3 完成：风格锁定 + 主角色参考图已批准
+🎨 风格：${STYLE_PRESET}
+👤 角色：${CHARACTER_DESC_JSON.character_name}
+📄 风格锁：${RUN_DIR}/style.lock.json
+🖼️  主参考图：${RUN_DIR}/master/master-reference.png
+---
+下一步：Phase 4 — 逐场景生成插图（所有场景将使用此主参考图确保角色一致）
+```
+
+Proceed to Phase 4 immediately (no user intervention required between Phase 3 and 4).
+
+---
+
+## Phase 4: Per-Scene Image Generation (Character Consistency via --reference)
+
+**Purpose:** Generate one illustration per scene from `lesson-outline.json`, ensuring character consistency by passing `--reference ${RUN_DIR}/master/master-reference.png` to EVERY scene generation.
+
+**Inputs consumed:**
+- `${RUN_DIR}/lesson-outline.json` → `teaching.scenes[]` (each scene has `index` and `image_brief`)
+- `${RUN_DIR}/style.lock.json` + `.identity.txt` + `.style.txt`
+- `${RUN_DIR}/master/master-reference.png` (locked in Phase 3)
+
+**Outputs produced:**
+- `${RUN_DIR}/images/scene-{NN}.png` (one per scene, NN = zero-padded index)
+- `${RUN_DIR}/bible-reviews/review-{NN}.md` (theological review per scene)
+- `${RUN_DIR}/image-manifest.json` (updated by `generate.js` after each call)
+
+### Step 4.1 — Invoke bible-image-core for Phase 4
+
+Call the `bible-image-core` agent via `Task` to execute Phase 4 (per-scene generation loop):
+
+```text
+Task(subagent_type="ppt-agent:bible-image-core",
+     prompt="run_dir=${RUN_DIR} phase=4")
+```
+
+The agent will:
+1. Read `lesson-outline.json` and extract `teaching.scenes[]`.
+2. For each scene (sorted by `index`):
+   a. Write `${RUN_DIR}/briefs/scene-{NN}.txt` from `image_brief`.
+   b. Call `skills/image-gen/scripts/generate.js` with:
+      ```
+      --run-dir ${RUN_DIR}
+      --label scene-{NN}
+      --out ${RUN_DIR}/images/scene-{NN}.png
+      --prompt-file ${RUN_DIR}/briefs/scene-{NN}.txt
+      --identity-file ${RUN_DIR}/style.lock.identity.txt
+      --style-file ${RUN_DIR}/style.lock.style.txt
+      --reference ${RUN_DIR}/master/master-reference.png    ← KEY: ensures character consistency
+      ```
+   c. Call `review-core` agent (mode=bible_review) to check for anachronisms, theological accuracy, reverence.
+   d. Present each scene image + review to the teacher for approval.
+   e. If teacher requests redo: re-run generation with `--redo` flag (up to 3 retries per scene via `redo_state.js`).
+   f. If scene exhausts retries or backend fails: write a placeholder entry in `image-manifest.json` with `"status": "missing"`, do NOT fake the image.
+
+**Expected agent signals:**
+- `scene-{NN}-generated` → scene image ready for review.
+- `scene-{NN}-approved` → teacher approved, moving to next scene.
+- `scene-{NN}-missing` → scene failed after retries; placeholder written.
+- `phase-4-complete` → all scenes processed (mix of approved + missing allowed).
+
+### Step 4.2 — Wait for Phase 4 completion
+
+The agent will process all scenes autonomously with human-in-the-loop approval. Wait for the `phase-4-complete` signal.
+
+If the agent reports errors (e.g., `lesson-outline.json` missing `teaching.scenes[]`, or all scenes failed), surface the error to the teacher and stop.
+
+### Step 4.3 — Verify image manifest
+
+After Phase 4 completes, check `${RUN_DIR}/image-manifest.json` to count successful vs. missing scenes:
+
+```bash
+TOTAL_SCENES=$(node -e "const o=JSON.parse(require('fs').readFileSync('${RUN_DIR}/lesson-outline.json','utf8')); console.log(o.teaching.scenes.length);")
+GENERATED_SCENES=$(ls ${RUN_DIR}/images/scene-*.png 2>/dev/null | wc -l | xargs)
+MISSING_SCENES=$((TOTAL_SCENES - GENERATED_SCENES))
+
+echo "📊 场景生成统计："
+echo "   总场景数：${TOTAL_SCENES}"
+echo "   成功生成：${GENERATED_SCENES}"
+echo "   缺失/失败：${MISSING_SCENES}"
+```
+
+If `MISSING_SCENES > 0`, warn the teacher:
+```
+⚠️  警告：有 ${MISSING_SCENES} 个场景图片未能生成（后端失败或重试耗尽）。
+   最终 PPT 中这些场景将使用占位符或跳过。
+   可选操作：检查 ${RUN_DIR}/image-manifest.json 查看失败原因，或稍后重跑 Phase 4。
+```
+
+If `GENERATED_SCENES == 0`, stop and report:
+```
+❌ Phase 4 失败：所有场景图片生成失败。无法继续到 Phase 5（PPT 组装）。
+   请检查：
+   1. image-gen 后端是否可用（Gemini API 凭证等）
+   2. lesson-outline.json 的 image_brief 是否合理
+   3. ${RUN_DIR}/image-manifest.json 中的错误日志
+```
+
+### Step 4.4 — Print Phase 4 completion summary
+
+If at least one scene was generated successfully:
+
+```
+✅ Phase 4 完成：场景插图生成
+📊 成功生成：${GENERATED_SCENES} / ${TOTAL_SCENES} 场景
+🖼️  图片目录：${RUN_DIR}/images/
+📄 生成清单：${RUN_DIR}/image-manifest.json
+🔍 神学审核：${RUN_DIR}/bible-reviews/
+---
+✨ 角色一致性已通过 --reference 机制确保（所有场景使用同一 master 参考图）
+下一步：Phase 5 — PPT 组装
+```
+
+Proceed to Phase 5.
+
+---
 
 ### Phase 5 — PPT Assembly
 
