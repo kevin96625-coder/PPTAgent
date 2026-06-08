@@ -56,6 +56,26 @@ Generate final design-quality SVG slides using Bento Grid layout system and styl
 4. Write SVG to `slides/slide-{slide_index}.svg`.
 5. Send `slide_ready` to lead.
 
+## Deterministic Auto-Fix (run after generation, before validation)
+
+After writing each SVG (Execution step 4) and **before** the validation checks below, run the deterministic `svg-autofix` fixer. It clears mechanical hard-violations — font-size floor, dark-background text contrast, and top-level title/page-number safe-area — so they are repaired up front and never reach the validator or Gemini, where they would otherwise trigger avoidable fix loops:
+
+```bash
+node skills/_shared/scripts/svg-autofix-cli.js \
+  "${run_dir}/slides/slide-${slide_index}.svg" \
+  --tokens '{"background":"<style background hex>","card_bg":"<style card_bg hex>"}' \
+  --out "${run_dir}/slides/slide-${slide_index}.svg"
+```
+
+Build the `--tokens` JSON from the active style tokens you already loaded (`skills/_shared/references/styles/${style}.yaml`, or `brand-style.yaml` when present): pass at minimum `background` and `card_bg` (the surface colors the contrast fix compares text against). The CLI prints the number of fixes applied to stderr and the output path to stdout.
+
+The fixer is conservative — it **only applies changes that can only improve the slide**:
+- **Font floor:** raises any `font-size` below 14px (12px for `data-role="label"`/footnote text).
+- **Text contrast:** lightens (dark theme) or darkens (light theme) **top-level** text fills that fail the contrast floor against the worst-case surface. Nested text inside cards/badges and any `data-decorative` text is left untouched — Gemini's visual review handles those.
+- **Safe area:** clamps **only top-level, role-tagged** `data-role="title"` / `data-role="page-number"` elements (no `transform` ancestor) back inside the safe band. It never moves nested elements, so legitimate local coordinates inside transformed groups are preserved.
+
+This is why the role tagging in SVG Requirements matters: untagged or nested title/page-number text is intentionally left alone. If Node is unavailable, skip this step and rely on the manual checks below.
+
 ## Post-Generation Validation
 
 After writing each SVG file, run these automated checks using the Bash tool before reporting completion:
@@ -99,6 +119,11 @@ If any check fails, fix the SVG and re-validate before proceeding. These checks 
 - `viewBox="0 0 1280 720"` — fixed 16:9 aspect ratio.
 - **Images:** Data/vector pages stay fully inline SVG (charts, metrics, Bento cards). **Asset pages** — pages whose outline entry has `asset.needed=true` — MAY embed one real raster image via `<image href="images/slide-NN.jpg" .../>`. Use a **relative path** (`images/slide-NN.jpg` or `.png`): the file is fetched/generated upstream by research-core into `${run_dir}/images/`, and the delivery phase copies that folder next to the SVGs so the relative reference resolves. Keep the `href` a file path — never inline a base64 data URI (it bloats the SVG and blows the Gemini review token budget). **Never hand-draw a fake product, logo, car, or person（禁止手绘假的实物/品牌/人物）.** If an `asset.needed=true` page has no real image available in `${run_dir}/images/`, leave a styled placeholder (a neutral framed rect with the caption) and flag `needs_real_image` — 绝不手绘冒充真实实物的图,do NOT substitute a hand-drawn imitation of the real thing.
 - Use `<text>` with proper font-family from style tokens.
+- **Role tags (`data-role`) for deterministic auto-fix.** Tag the page's structural text so the deterministic fixer (see Deterministic Auto-Fix below) can locate and safely correct it:
+  - The **main title** of the slide → `<text data-role="title" ...>`.
+  - The **page number** (corner) → `<text data-role="page-number" ...>`.
+  - **Small labels / footnotes / captions / eyebrow text** → `data-role="label"` (these get a lower 12px font floor instead of 14px).
+  These tags only need to sit on **top-level** title/page-number elements (direct children of the root `<svg>`, with no `transform` ancestor) for the coordinate (safe-area) fix to apply — the fixer never moves nested elements, since their coordinates are local to a transformed group and legitimately offset. Tagging is cheap and lets the fixer target the right elements precisely instead of guessing.
 - Card backgrounds use `<rect>` with rounded corners from style tokens.
 - Shadows via SVG `<filter>` elements.
 - **Color Zone Model** (3 zones):
