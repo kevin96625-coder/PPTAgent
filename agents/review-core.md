@@ -89,13 +89,27 @@ The text-only review above judges layout from the SVG source, but it **cannot te
    node skills/_shared/scripts/render-svg-cli.js "${run_dir}/slides/slide-${slide_index}.svg" "${run_dir}/reviews/render-${slide_index}.png"
    ```
    (If the render helper degrades — e.g. `chrome-not-found` — fall back to the text review and note that the visual asset dimension could not be scored; never block.)
-2. **Invoke Gemini with vision** by passing the rendered PNG via `--image`, so the reviewer evaluates the actual rendered slide:
+2. **Invoke Gemini with vision** by passing the rendered PNG via `--image` AND a `--prompt`, so the reviewer evaluates the actual rendered slide. **`--prompt` is REQUIRED** — `invoke-gemini-ppt.ts` hard-fails (exit 1) without it, which would silently drop the asset dimension back to text-only review. The vision prompt MUST instruct Gemini to score the **Asset Relevance & Professionalism (0-10)** rubric by *looking at the attached rendered image* and to return a `reason`:
    ```bash
    npx tsx skills/gemini-cli/scripts/invoke-gemini-ppt.ts --role reviewer \
      --image "${run_dir}/reviews/render-${slide_index}.png" \
+     --prompt "## Task — Asset Relevance & Professionalism (Vision)
+Look at the ATTACHED rendered slide image (not the SVG text) and score the embedded photo on the **Asset Relevance & Professionalism (0-10)** rubric:
+- Is it the real, correct subject from the brief (the actual product/logo/person), NOT a generic stock substitute, wrong variant, or AI-rendered stand-in?
+- Is it NOT a fake hand-drawn imitation of a real entity, and NOT a bare missing-image placeholder?
+- Is the resolution/composition high enough and the integration clean (proper crop, text legible over any scrim, no distorted aspect ratio)?
+
+## Slide Context
+Slide index: ${slide_index}
+Title: ${SLIDE_TITLE}
+Page type: ${PAGE_TYPE} (asset page)
+Brief / expected subject: ${ASSET_QUERY}
+
+## Output
+Return the Asset Relevance & Professionalism score (0-10), pass/fail (< 6 = critical, must route to fix — never a silent pass), and a **\`reason\`** field stating *why* (e.g. why the image reads as unprofessional or off-brief). Also include the standard typed Optimization Suggestions / Suggestions JSON / Quality Gate per references/roles/reviewer.md." \
      --output "${run_dir}/reviews/gemini-raw-${slide_index}.md"
    ```
-   (Invoke through the `ppt-agent:gemini-cli` skill as usual; the only addition is the `--image <rendered png>` flag for asset pages.)
+   (Invoke through the `ppt-agent:gemini-cli` skill as usual; the additions for asset pages are the `--image <rendered png>` flag AND the asset-review `--prompt`.)
 3. **Score an extra dimension — Asset Relevance & Professionalism (0-10)** — a real rubric, not a checkbox:
    - **9-10**: the image is unmistakably the real, correct subject (the actual product/logo/person from the brief), high resolution, well-composed, and integrated cleanly (proper crop, legible text over scrim).
    - **6-8**: correct subject but with minor issues (slightly off angle, soft resolution, modest crop/scrim flaws).

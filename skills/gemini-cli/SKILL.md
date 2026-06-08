@@ -124,7 +124,26 @@ Follow the exact structure from references/roles/reviewer.md:
 "
 ```
 
-> For asset pages, add `--image "${RUN_DIR}/reviews/render-${N}.png"` to the invocation above so Gemini sees the rendered photo.
+### Asset Pages — Vision Invocation (`--image` + REQUIRED `--prompt`)
+
+For asset pages, render the SVG to PNG and add `--image "${RUN_DIR}/reviews/render-${N}.png"`. **`--prompt` is REQUIRED on the vision call too** — `invoke-gemini-ppt.ts` exits 1 if `--prompt` is missing, which would silently drop the run back to text-only review and skip the asset dimension. The vision prompt MUST tell Gemini to score the **Asset Relevance & Professionalism (0-10)** rubric by *looking at the attached rendered image*:
+
+```bash
+npx tsx scripts/invoke-gemini-ppt.ts \
+  --role reviewer \
+  --image "${RUN_DIR}/reviews/render-${N}.png" \
+  --output "${RUN_DIR}/reviews/gemini-raw-${N}.md" \
+  --prompt "## Task — Asset Relevance & Professionalism (Vision)
+Look at the ATTACHED rendered slide image (not the SVG text) and score the embedded photo on the **Asset Relevance & Professionalism (0-10)** rubric:
+- Is it the real, correct subject from the brief (the actual product/logo/person), NOT a generic/stock substitute, wrong variant, or AI-rendered stand-in?
+- Is it NOT a fake hand-drawn imitation of a real entity, and NOT a bare missing-image placeholder?
+- Is the resolution/composition high enough and the integration clean (proper crop, text legible over any scrim, no distorted aspect ratio)?
+
+## Output
+Return the Asset Relevance & Professionalism score (0-10), pass/fail (< 6 = critical → route to fix, never a silent pass), and a **\`reason\`** field stating *why* (e.g. why the image reads as unprofessional or off-brief). Also include the standard Optimization Suggestions / Suggestions JSON / Quality Gate per references/roles/reviewer.md."
+```
+
+> NOTE: `--prompt` is NOT optional for the vision call. Omitting it throws (exit 1) and the asset-relevance dimension never runs.
 
 ---
 

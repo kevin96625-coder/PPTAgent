@@ -74,11 +74,15 @@ For each `asset.needed=true` page (page number `NN`, with its `asset.kind`, `ass
 - **`kind="scene"`** (abstract / concept / mood → AI-generated):
   ```bash
   node skills/image-gen/scripts/generate.js --run-dir "${run_dir}" --label slide-NN \
-    --out "${run_dir}/images/slide-NN.png" --prompt-file "${run_dir}/briefs/slide-NN.txt"
+    --out "${run_dir}/images/slide-NN.png" --prompt-file "${run_dir}/briefs/slide-NN.txt" \
+    --aspect 16:9
   ```
+  **Pass `--aspect 16:9`** — `generate.js` defaults to `4:3`, but slides are 16:9; without this flag scene images get mis-cropped on the slide.
   Write the generation prompt (derived from `asset.query` + `asset.caption`) to the brief file first. On success record `status: "generated"` with `backend`. See `skills/image-gen/SKILL.md` for the full CLI contract and backend options. If generation fails, record `status: "missing"` and continue.
 
-- **Manifest:** maintain `${run_dir}/images-manifest.json` using the entry structure from `skills/_shared/scripts/lib/images-manifest.js` (`makeEntry` → fields `page`, `kind`, `path`, `source_url`, `backend`, `width`, `height`, `status`). All downloaded/generated images live under `${run_dir}/images/`. Validate with `validateManifest` before finishing.
+- **Manifest:** maintain `${run_dir}/images-manifest.json` (M2.5, **plural** `images-`) using the entry structure from `skills/_shared/scripts/lib/images-manifest.js` (`makeEntry` → fields `page`, `kind`, `path`, `source_url`, `backend`, `width`, `height`, `status`). All downloaded/generated images live under `${run_dir}/images/`. Validate with `validateManifest` before finishing.
+
+> **Caution — manifest name collision:** `${run_dir}/images-manifest.json` (M2.5, **plural** `images-`) is DISTINCT from image-gen's own `${run_dir}/image-manifest.json` (**singular** `image-`) that `generate.js` writes. research-core must maintain the **plural** `images-manifest.json` separately after each `image-gen` call — do not conflate the two or let image-gen's singular file stand in for it.
 
 Pages that end up `missing` are left for the human preview gate — do NOT error, fabricate, or block on them here.
 

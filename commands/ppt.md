@@ -275,7 +275,7 @@ Before committing to the full batch, produce a **sample (样片)** and run a hum
 3. **Compute the missing-image list** — use `assetPlan(outline, manifest)` from `skills/_shared/scripts/lib/asset-plan.js` against `${RUN_DIR}/outline.json` + `${RUN_DIR}/images-manifest.json` to derive `needs_real_image`. Present to the user, in one shot: the rendered **sample PNGs** (to confirm style), **all asset-page candidate images** found under `${RUN_DIR}/images/` (to confirm the photos are right), and the **缺图清单 (`needs_real_image` / `status:missing` pages)**.
 4. **Hard Stop — wait for the user.** The user may: accept the direction / replace a specific page's image / drop an official image into `${RUN_DIR}/images/` (and update `images-manifest.json`) / accept an abstract treatment for a page that has no real image. Do NOT proceed to batch design until the user confirms.
 
-This gate coordinates with `--stop-at`: it is an observable stop point (akin to `--stop-at=preview`), and a `--run-id` resume re-enters it until confirmed.
+This gate is a plain **in-phase Hard Stop**, NOT a `--stop-at` stage — there is no `--stop-at=preview` value. Because it is not a stop-at stage, a `--run-id` resume re-enters Phase 6 **from the top** (re-generating the sample and re-presenting the gate) until the user confirms; it does not jump straight back to this point.
 
 ### Phase 6 · Step B — Batch Design
 
