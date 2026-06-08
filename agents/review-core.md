@@ -80,6 +80,32 @@ Only proceed to LLM review if no Critical automated checks fail.
 10. If pass: send `review_passed` to lead (include `mode=full` or `mode=technical_only`).
 11. If fail (Gemini path): send `review_failed(suggestions_json=[...])` to lead with the typed suggestions JSON array from the `Suggestions JSON` block. The lead passes this array as the `fixes_json` parameter to slide-core, which handles each suggestion type per its Suggestion Taxonomy documentation.
 
+### Visual Review for Asset Pages (`mode=review`)
+
+The text-only review above judges layout from the SVG source, but it **cannot tell whether an embedded photo is the right photo** (e.g. a generic stock sketch standing in for the actual product). For any slide whose outline page has `asset.needed=true`, augment the review with a **rendered vision pass** so Gemini actually *sees the photo*:
+
+1. **Render the final SVG to PNG** (so the real raster image is visible, not just the `<image href>` text):
+   ```bash
+   node skills/_shared/scripts/render-svg-cli.js "${run_dir}/slides/slide-${slide_index}.svg" "${run_dir}/reviews/render-${slide_index}.png"
+   ```
+   (If the render helper degrades — e.g. `chrome-not-found` — fall back to the text review and note that the visual asset dimension could not be scored; never block.)
+2. **Invoke Gemini with vision** by passing the rendered PNG via `--image`, so the reviewer evaluates the actual rendered slide:
+   ```bash
+   npx tsx skills/gemini-cli/scripts/invoke-gemini-ppt.ts --role reviewer \
+     --image "${run_dir}/reviews/render-${slide_index}.png" \
+     --output "${run_dir}/reviews/gemini-raw-${slide_index}.md"
+   ```
+   (Invoke through the `ppt-agent:gemini-cli` skill as usual; the only addition is the `--image <rendered png>` flag for asset pages.)
+3. **Score an extra dimension — Asset Relevance & Professionalism (0-10)** — a real rubric, not a checkbox:
+   - **9-10**: the image is unmistakably the real, correct subject (the actual product/logo/person from the brief), high resolution, well-composed, and integrated cleanly (proper crop, legible text over scrim).
+   - **6-8**: correct subject but with minor issues (slightly off angle, soft resolution, modest crop/scrim flaws).
+   - **3-5**: questionable — generic/stock substitute, wrong variant, or a clearly AI-rendered stand-in where a real photo was expected; or serious integration problems (distorted aspect ratio, text unreadable on the photo).
+   - **0-2**: a fake hand-drawn imitation of a real entity, a missing image left as a bare placeholder, or an image that contradicts the content.
+   Below the threshold (< 6) → **critical**: route to fix (re-search a better image / replace the image / regenerate the layout), not a silent pass.
+4. **Each suggestion includes a `reason` field** explaining *why* the image/treatment is unprofessional (e.g. `"reason": "the image is a generic stock sketch of a sedan, not the actual SU7 product shot named in the brief"`), so the fix is traceable and the gate cannot rubber-stamp a fake with a high score.
+
+**Data pages keep the text (SVG-source) review.** For pages where `asset.needed` is false or absent, do NOT render to PNG and do NOT pass `--image` — the existing text-based review on the SVG source is sufficient and saves tokens/latency. The vision pass is reserved for asset pages, where photo correctness is the thing that text review is blind to.
+
 ### Holistic Mode Execution
 
 For `mode=holistic`:

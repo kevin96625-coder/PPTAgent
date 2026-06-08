@@ -72,3 +72,21 @@ test('Phase 6 runs a sample-slide preview Hard Stop BEFORE batch design', () => 
   const batchIdx = p6[0].search(/批量|batch/i);
   assert.ok(sampleIdx > -1 && batchIdx > -1 && sampleIdx < batchIdx, 'sample before batch');
 });
+
+const REVIEW_CORE = read('../../../agents/review-core.md');
+
+test('review-core renders asset pages to PNG and reviews via vision (--image)', () => {
+  assert.match(REVIEW_CORE, /render-svg-cli|render-svg|\.png/);
+  assert.match(REVIEW_CORE, /--image/);
+  assert.match(REVIEW_CORE, /asset\.needed|资产页|asset page/i);
+});
+
+test('review-core adds asset-quality / professionalism dimension + reason', () => {
+  assert.match(REVIEW_CORE, /资产|asset/i);
+  assert.match(REVIEW_CORE, /贴切|relevance|fit|专业|professional/i);
+  assert.match(REVIEW_CORE, /reason/);
+});
+
+test('review-core keeps text(SVG-source) review for data pages', () => {
+  assert.match(REVIEW_CORE, /data page|数据页|SVG source|文本审查/i);
+});
