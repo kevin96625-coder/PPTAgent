@@ -41,3 +41,21 @@ test('passing fill unchanged', () => {
   assert.equal(out, svg);
   assert.ok(!fixes.some((f) => f.type === 'contrast'));
 });
+
+test('top-level title with low baseline is clamped to y>=92', () => {
+  const svg = `<svg viewBox="0 0 1280 720"><text data-role="title" x="60" y="70" font-size="34" fill="#f1f5f9">T</text></svg>`;
+  const { svg: out, fixes } = autofixSvg(svg, { tokens: TOK });
+  assert.match(out, /data-role="title"[^>]*y="92"|y="92"[^>]*data-role="title"/);
+  assert.ok(fixes.some((f) => f.type === 'safe-area'));
+});
+test('NESTED title (inside transformed g) is NOT moved', () => {
+  const svg = `<svg viewBox="0 0 1280 720"><g transform="translate(0,200)"><text data-role="title" x="60" y="14" font-size="34" fill="#f1f5f9">T</text></g></svg>`;
+  const { svg: out } = autofixSvg(svg, { tokens: TOK });
+  assert.match(out, /y="14"/); // unchanged — local coords are legitimate
+});
+test('top-level page-number below 688 clamped up', () => {
+  const svg = `<svg viewBox="0 0 1280 720"><text data-role="page-number" x="1240" y="705" font-size="14" fill="#f1f5f9">06</text></svg>`;
+  const { svg: out } = autofixSvg(svg, { tokens: TOK });
+  assert.match(out, /y="688"/);
+  assert.match(out, /x="1220"/);
+});

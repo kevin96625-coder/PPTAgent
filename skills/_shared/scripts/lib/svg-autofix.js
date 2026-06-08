@@ -93,6 +93,48 @@ function autofixSvg(svg, opts = {}) {
     out = rebuilt;
   }
 
+  // --- safe-area: only top-level (no <g> / transform ancestor) role-tagged
+  //     title / page-number get coordinate clamps. Nested elements use legitimate
+  //     local coordinates and must NEVER be moved. Match ALL <g> groups (not just
+  //     transformed ones) so any group nesting disqualifies a text from clamping.
+  {
+    const { inRange: inAnyG } = groupRanges(out, /^/); // /^/ matches every <g> open
+    const matches = [...out.matchAll(/<text\b[^>]*>/g)];
+    let rebuilt = '';
+    let cursor = 0;
+    for (const mt of matches) {
+      const tag = mt[0];
+      const idx = mt.index;
+      rebuilt += out.slice(cursor, idx);
+      cursor = idx + tag.length;
+      let t2 = tag;
+      if (!inAnyG(idx)) {
+        const role = (tag.match(/data-role="([^"]+)"/) || [])[1];
+        if (role === 'title' || role === 'page-number') {
+          const ym = tag.match(/\by="(-?[0-9.]+)"/);
+          const xm = tag.match(/\bx="(-?[0-9.]+)"/);
+          if (role === 'title' && ym && parseFloat(ym[1]) < 92) {
+            t2 = t2.replace(/\by="-?[0-9.]+"/, 'y="92"');
+            fixes.push({ type: 'safe-area', detail: 'title y->92' });
+          }
+          if (role === 'page-number') {
+            if (ym && parseFloat(ym[1]) > 688) {
+              t2 = t2.replace(/\by="-?[0-9.]+"/, 'y="688"');
+              fixes.push({ type: 'safe-area', detail: 'pagenum y->688' });
+            }
+            if (xm && parseFloat(xm[1]) > 1220) {
+              t2 = t2.replace(/\bx="-?[0-9.]+"/, 'x="1220"');
+              fixes.push({ type: 'safe-area', detail: 'pagenum x->1220' });
+            }
+          }
+        }
+      }
+      rebuilt += t2;
+    }
+    rebuilt += out.slice(cursor);
+    out = rebuilt;
+  }
+
   return { svg: out, fixes };
 }
 module.exports = { autofixSvg };
