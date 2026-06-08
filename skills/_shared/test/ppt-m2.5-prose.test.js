@@ -43,3 +43,17 @@ test('slide-core specifies relative-path image embedding', () => {
   assert.match(SLIDE_CORE, /images\//);
   assert.match(SLIDE_CORE, /href=/);
 });
+
+const RESEARCH_CORE = read('../../../agents/research-core.md');
+
+test('research-core fetches brand-entity images and generates scene images', () => {
+  assert.match(RESEARCH_CORE, /asset\.needed|asset pages|资产页/);
+  assert.match(RESEARCH_CORE, /image-search\.sh/);
+  assert.match(RESEARCH_CORE, /image-gen/);
+  assert.match(RESEARCH_CORE, /images-manifest|image-manifest|images\.json/);
+  assert.match(RESEARCH_CORE, /run_dir\/images|images\//);
+});
+
+test('research-core image fetch is best-effort (missing does not block)', () => {
+  assert.match(RESEARCH_CORE, /missing|尽力|best-effort|不阻塞|degrade/i);
+});

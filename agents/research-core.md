@@ -58,6 +58,30 @@ Handle all research workloads: background investigation for requirement discover
      - Write findings to `${run_dir}/${output_file}` as a standalone file (NOT append to shared `materials.md` — lead handles merging).
      - Send `collection_ready` to lead.
 
+## Asset Collection (after the outline is available)
+
+Once `${run_dir}/outline.json` exists, collect a real visual asset for every page whose outline entry has `asset.needed=true`. This runs as a **best-effort, non-blocking** pass — a missing image is recorded as `missing` and handled later by the preview gate; it MUST NOT block the workflow or error out.
+
+For each `asset.needed=true` page (page number `NN`, with its `asset.kind`, `asset.query`, `asset.caption`):
+
+- **`kind="brand-entity"`** (real product / logo / person → web-fetched image):
+  ```bash
+  bash skills/agent-reach/scripts/image-search.sh "<asset.query>" "${run_dir}/images/slide-NN.jpg"
+  ```
+  - On success (exit 0, prints the path): record a manifest entry with `status: "fetched"` and the `source_url`.
+  - On failure (non-zero exit, e.g. `no-image-source`): record `status: "missing"` and move on. **Best-effort — never blocks.** Do not retry endlessly or treat this as an error; the preview gate lets the user drop in an official image.
+
+- **`kind="scene"`** (abstract / concept / mood → AI-generated):
+  ```bash
+  node skills/image-gen/scripts/generate.js --run-dir "${run_dir}" --label slide-NN \
+    --out "${run_dir}/images/slide-NN.png" --prompt-file "${run_dir}/briefs/slide-NN.txt"
+  ```
+  Write the generation prompt (derived from `asset.query` + `asset.caption`) to the brief file first. On success record `status: "generated"` with `backend`. See `skills/image-gen/SKILL.md` for the full CLI contract and backend options. If generation fails, record `status: "missing"` and continue.
+
+- **Manifest:** maintain `${run_dir}/images-manifest.json` using the entry structure from `skills/_shared/scripts/lib/images-manifest.js` (`makeEntry` → fields `page`, `kind`, `path`, `source_url`, `backend`, `width`, `height`, `status`). All downloaded/generated images live under `${run_dir}/images/`. Validate with `validateManifest` before finishing.
+
+Pages that end up `missing` are left for the human preview gate — do NOT error, fabricate, or block on them here.
+
 ## Communication
 - Directed messages with `requires_ack=true` must be acknowledged.
 - On failure, send `error` with failed step id and stderr summary.
