@@ -111,14 +111,20 @@ ${STYLE_NAME} style with tokens: ${STYLE_TOKENS}
 3. Typography: hierarchy clarity, font size appropriateness, line spacing
 4. Readability: text legibility at presentation resolution, information flow
 5. Information Density: content-to-whitespace ratio, cognitive load
+6. Asset Relevance & Professionalism (asset pages only — when a rendered image is supplied via --image): does the embedded photo show the real, correct subject from the brief (the actual product/logo/person), at adequate resolution and composition, integrated cleanly (proper crop, text legible over a scrim)? Penalize generic/stock substitutes, wrong variants, obviously AI-rendered stand-ins where a real photo is expected, distorted aspect ratios, and — worst of all — fake hand-drawn imitations of a real entity or bare missing-image placeholders. Score 0-10; below 6 is a critical issue that must route to a fix (re-search / replace / regenerate), never a silent pass.
+
+## Asset Pages — Vision Input
+When reviewing an **asset page** (the slide embeds a real photo), the caller renders the SVG to PNG and passes it with `--image <rendered png>` so you evaluate the **actual rendered slide**, not just the `<image href>` text. Use the rendered image to judge criterion 6. For **data pages** (pure vector/charts) no `--image` is supplied and criterion 6 does not apply — review from the SVG source only.
 
 ## Output Format
 Follow the exact structure from references/roles/reviewer.md:
-1. **Optimization Suggestions** (primary): typed suggestions using the 5-type taxonomy (attribute_change, layout_restructure, full_rethink, content_reduction, deck_coordination). Each with type, priority (1-3), description, and type-specific details.
-2. **Suggestions JSON**: parseable JSON array of all suggestions for downstream automation.
-3. **Quality Gate** (secondary): overall_score (1-10), pass (true/false), per-criterion weighted scores, hard rule violations.
+1. **Optimization Suggestions** (primary): typed suggestions using the 5-type taxonomy (attribute_change, layout_restructure, full_rethink, content_reduction, deck_coordination). Each with type, priority (1-3), description, type-specific details, and a **`reason`** field stating *why* the change is needed (e.g. why an image reads as unprofessional or off-brief) so the suggestion is traceable and the gate cannot rubber-stamp a fake image with a high score.
+2. **Suggestions JSON**: parseable JSON array of all suggestions for downstream automation (each object includes its `reason`).
+3. **Quality Gate** (secondary): overall_score (1-10), pass (true/false), per-criterion weighted scores (including Asset Relevance & Professionalism for asset pages), hard rule violations.
 "
 ```
+
+> For asset pages, add `--image "${RUN_DIR}/reviews/render-${N}.png"` to the invocation above so Gemini sees the rendered photo.
 
 ---
 

@@ -90,3 +90,14 @@ test('review-core adds asset-quality / professionalism dimension + reason', () =
 test('review-core keeps text(SVG-source) review for data pages', () => {
   assert.match(REVIEW_CORE, /data page|数据页|SVG source|文本审查/i);
 });
+
+const GEMINI = read('../../gemini-cli/SKILL.md');
+
+test('gemini-cli reviewer prompt includes asset relevance/professionalism dimension', () => {
+  assert.match(GEMINI, /资产|asset relevance|professional/i);
+  assert.match(GEMINI, /reason/);
+});
+
+test('gemini-cli reviewer documents optional --image vision input for asset pages', () => {
+  assert.match(GEMINI, /--image/);
+});
