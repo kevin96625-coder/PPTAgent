@@ -167,9 +167,40 @@ test('expected agent signal is "bible-image-core-done" not invented signals', ()
   // The agent actually sends "bible-image-core-done" (from line 305 of bible-image-core.md)
   // Commands should wait for this, not for "master-approved" or "phase-4-complete" etc
   const lower = commandText.toLowerCase();
-  
+
   assert.ok(
     lower.includes('bible-image-core-done'),
     'command must reference the actual agent signal: bible-image-core-done'
   );
+});
+
+test('resume logic has a Phase-4 branch (master_reference set → resume at Phase 4, reuse master)', () => {
+  // After a master is approved but scenes are incomplete, --run-id resume must land in
+  // Phase 4 reusing the existing master — NOT re-run Phase 3 / regenerate the master.
+  const lower = commandText.toLowerCase();
+  // The branch must key on a non-null master_reference and route to Phase 4.
+  const hasMasterRefKey = lower.includes('master_reference');
+  const routesToPhase4 = /master_reference[^]*?(resume at phase 4|phase 4)/is.test(commandText);
+  const reuseNotRegen = lower.includes('reuse') && lower.includes('master/master-reference.png');
+  assert.ok(hasMasterRefKey, 'resume detection must reference master_reference');
+  assert.ok(routesToPhase4, 'a non-null master_reference must route resume to Phase 4');
+  assert.ok(reuseNotRegen, 'Phase-4 resume must REUSE master/master-reference.png (not regenerate)');
+  // And it must be ordered BEFORE the generic "approved → Phase 3" branch (most specific first).
+  const p4Idx = commandText.toLowerCase().indexOf('resume at phase 4');
+  const p3Idx = commandText.toLowerCase().indexOf('skip to phase 3');
+  assert.ok(p4Idx > 0 && p3Idx > 0 && p4Idx < p3Idx,
+    'the master_reference → Phase 4 branch must be listed before the approved → Phase 3 branch');
+});
+
+test('bible-image-core agent has a resume guard (skip master regen when already approved)', () => {
+  const AGENT_FILE = path.join(REPO_ROOT, 'agents/bible-image-core.md');
+  const agentText = fs.readFileSync(AGENT_FILE, 'utf8');
+  const lower = agentText.toLowerCase();
+  // The agent must detect an already-approved master and skip Steps 2-6 → Phase 4.
+  assert.ok(lower.includes('resume guard'), 'agent must document a resume guard');
+  assert.ok(lower.includes('master_reference') && lower.includes('master-reference.png'),
+    'resume guard must key on a non-null master_reference + existing master png');
+  const skipsToScenes = /skip steps?\s*2[–-]6|jump straight to phase 4|go directly to phase 4|directly to.*step 7/is.test(agentText);
+  assert.ok(skipsToScenes,
+    'resume guard must skip master generation/Hard Stop and jump straight to Phase 4 scene generation');
 });

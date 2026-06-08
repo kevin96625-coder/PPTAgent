@@ -46,6 +46,8 @@ Read `<RD>/lesson-outline.json` and confirm it contains `teaching.scenes[]` with
 
 Read `<RD>/lesson-source.json` — needed for bible_review context later.
 
+**Resume guard (master already approved).** Before doing any Phase 3 work, check: if `<RD>/style.lock.json` exists with a **non-null `master_reference`** AND `<RD>/master/master-reference.png` exists, the master was already generated and approved in a prior run. In that case **SKIP Steps 2–6 entirely** (no preset reload, no `write_style_lock`, no master regeneration, no master Hard Stop) and **jump straight to Phase 4 (Step 7)**. Read `style_preset` and the identity/style blocks from the existing `style.lock.json` + `style.lock.identity.txt` / `style.lock.style.txt`; the `preset` / `character_desc` inputs are optional on this resume path. This makes the agent idempotent on the master so a `--run-id` resume continues into per-scene generation without redoing the定妆照.
+
 ### Step 2: Load the style preset YAML
 
 Load the matching preset from `skills/_shared/references/styles/children/<preset>.yaml`. Parse the YAML manually (no yaml library — use a minimal key:value reader or read the file as-is and pass the raw text to the JS module via a temp JSON dump). In practice: call the `style_lock.js` module via Bash.

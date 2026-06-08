@@ -99,8 +99,9 @@ teacher approval before any images are generated.
    mkdir -p "${RUN_DIR}"
    ```
 
-4. **Resume detection** (when `--run-id` is provided):
-   - `lesson-outline.json` with `"approved": true` → skip to Phase 3 (style selection + image generation).
+4. **Resume detection** (when `--run-id` is provided — evaluate top to bottom, **most specific first**):
+   - `style.lock.json` exists with a **non-null `"master_reference"`** AND `images/` does **not** yet contain one PNG per scene → **resume at Phase 4** (the master was already approved; **reuse `master/master-reference.png`, do NOT re-run Phase 3 style selection or master generation**). On this path, skip Step 3.1/3.2 (style + character are already in `style.lock.json`) and invoke `bible-image-core` with `run_dir` only — the agent detects the approved master and goes straight to per-scene generation (see its resume guard).
+   - `lesson-outline.json` with `"approved": true` (and master **not** yet approved) → skip to Phase 3 (style selection + image generation).
    - `lesson-outline.json` with `"approved": false` → re-enter Phase 2 Hard Stop.
    - `lesson-source.json` exists but no `lesson-outline.json` → resume at Phase 2.
    - Nothing exists → start from Phase 1.
