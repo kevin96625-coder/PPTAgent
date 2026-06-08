@@ -17,6 +17,7 @@ function validateManifest(m) {
     return { ok: false, errors: ['manifest.images must be an array'] };
   }
   m.images.forEach((e, i) => {
+    if (!e || typeof e !== 'object') { errors.push(`images[${i}] must be an object`); return; }
     if (typeof e.page !== 'number') errors.push(`images[${i}].page must be number`);
     if (!IMAGE_STATUSES.has(e.status)) errors.push(`images[${i}].status invalid: ${e.status}`);
     if (e.status !== 'missing' && !e.path) errors.push(`images[${i}] non-missing requires path`);

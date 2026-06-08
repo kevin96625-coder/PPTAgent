@@ -1,8 +1,9 @@
 'use strict';
 // Flatten nested parts[].pages[] (same shape the validator reads).
 function collectPages(outline) {
+  const o = outline || {};
   const pages = [];
-  for (const part of (outline.parts || [])) {
+  for (const part of (o.parts || [])) {
     if (!part || typeof part !== 'object') continue;
     for (const pg of (part.pages || [])) if (pg && typeof pg === 'object') pages.push(pg);
   }

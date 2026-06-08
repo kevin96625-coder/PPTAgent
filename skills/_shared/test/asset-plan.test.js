@@ -29,3 +29,8 @@ test('assetPlan treats absent manifest entry as needing image', () => {
   const p = assetPlan(outline, { images: [] });
   assert.ok(p.needs_real_image.includes(1) && p.needs_real_image.includes(3));
 });
+
+test('assetPlan(null) returns empty plan without throwing', () => {
+  const p = assetPlan(null);
+  assert.deepEqual(p, { asset_pages: [], needs_real_image: [] });
+});

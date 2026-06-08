@@ -28,6 +28,11 @@ test('validateManifest accepts well-formed manifest', () => {
   assert.equal(r.ok, true);
 });
 
+test('validateManifest guards malformed (null) entries without throwing', () => {
+  const r = validateManifest({ images: [null] });
+  assert.equal(r.ok, false);
+});
+
 test('IMAGE_STATUSES vocabulary', () => {
   assert.deepEqual([...IMAGE_STATUSES].sort(), ['fetched', 'generated', 'missing']);
 });
