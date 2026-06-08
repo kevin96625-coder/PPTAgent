@@ -59,3 +59,21 @@ slide_type_overrides:
   section_divider:
     background: "#1b2838"
     text: "#ffffff"
+
+typography_ladder:           # base px @ scale 1.0; 实际 = base * typography.scale * (type override)
+  h1: 64        # 封面/区隔大标题、hero 数字(原 48-72 区间收敛到 64 档)
+  h2: 40        # 页面主标题(原 36-44 → 40 档)
+  h3: 28        # 卡片标题/小节标题(原 24-32 → 28 档)
+  body: 18      # 正文(社区反馈下限 16;取 18)
+  label: 15     # 标签/坐标轴/图例(≥14 floor;取 15)
+  caption: 14   # 脚注/出处(≥14)
+  micro: 12     # 页码/角标(唯一允许 <14 的角色,data-role=page-number/label)
+
+color_ratio:                 # 60/30/10 设计意图预算(面积占比),非硬约束;仅供软警告参考
+  dominant: 60               # 主导(通常 background)
+  secondary: 30              # 次级(primary/secondary/card_bg/text)
+  accent: 10                 # 强调(accent)
+  buckets:                   # 把 color_scheme 的 token 归到三桶(校验器据此分类 fill)
+    dominant: [background]
+    secondary: [primary, secondary, card_bg, text]
+    accent: [accent]

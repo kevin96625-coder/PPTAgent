@@ -34,6 +34,8 @@ These are hard rules — violations are reported in the Hard Rule Violations sec
 | Text overflow | Text elements MUST NOT extend beyond their parent card boundaries | Critical |
 | Body text size | No body text below 14px font-size | Major |
 
+> **P3 deterministic hints (advisory reference signals — NOT hard rules).** The orchestrator may attach precomputed soft observations from the `type-color-cli` analyzer — e.g. "this page uses N distinct font sizes (typography ladder has 7 rungs)", "off-ladder sizes [...]", "accent color covers ~X% of measurable area vs a 60/30/10 budget". These are **reference signals you MAY consult** when judging visual hierarchy and color balance; they add **no new hard-block threshold** and never by themselves create a Hard Rule Violation. Weigh them with your own visual judgment; the analyzer is a coarse geometric estimate, not pixel truth.
+
 ## Content Density Targets by Page Type
 
 | Page Type | Target Info Units | Max Key Points | Preferred Layout |

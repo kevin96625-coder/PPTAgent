@@ -39,8 +39,9 @@ Before invoking Gemini/Claude review, run these deterministic checks on the SVG.
 3. **Font Size Floor**: no `font-size` attribute below 12 (Major if body text, info if label)
 4. **Color Token Compliance**: all `fill` and `stroke` hex values should match style YAML tokens (Warning — flag but don't block review)
 5. **Safe Area**: no primary content elements positioned outside the 60px safe area margins (Major)
+6. **Typography & Color Budget hints (P3, ADVISORY only)**: optionally run `node skills/_shared/scripts/type-color-cli.js --svg <slide> --style <style.yaml> [--effective-scale <n>]` to collect deterministic soft signals (`too-many-sizes`, `off-ladder`, `accent-overload`, `no-dominant`). These are **deterministic hints for Gemini to consult, NOT a quality gate** — they never fail the deterministic check, never skip the LLM review, and add **no new Gemini hard rule**. The analyzer is read-only and always exits 0; ignore `insufficient_area` reports.
 
-Only proceed to LLM review if no Critical automated checks fail.
+Only proceed to LLM review if no Critical automated checks fail. (Step 6 is advisory and can never cause a Critical failure.)
 
 ## Execution
 1. Read the full SVG source from `${run_dir}/slides/slide-{slide_index}.svg`.
@@ -56,6 +57,7 @@ Only proceed to LLM review if no Critical automated checks fail.
    - The **full SVG source code** (MUST be included — reviewing by filename alone is forbidden per `gemini-cli/SKILL.md` constraints)
    - The **style token values** (color scheme, typography, card style)
    - The **slide context** (index, title, presentation style name, page type, visual weight)
+   - **(Optional) P3 deterministic hints**: if you ran the Typography & Color Budget analyzer (deterministic check 6), append its soft warnings to the prompt as "deterministic hints (advisory observations Gemini did not have to compute — e.g. this page uses N distinct font sizes, or accent color covers ~X% of measurable area)". Frame them as **observations for Gemini to weigh, not directives** — Gemini decides whether to act on them. Do **not** add any new hard rule or auto-block from these hints.
 6. Call Gemini for layout & aesthetic optimization via the `ppt-agent:gemini-cli` skill.
    The Skill tool loads the skill's SKILL.md into context at runtime (not pre-injected). The skill instructs how to call `invoke-gemini-ppt.ts` via Bash. Both `Skill` and `Bash` tools are required.
    ```
