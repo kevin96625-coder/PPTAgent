@@ -6,6 +6,22 @@
 > - **下一步**:① 用户跑一次真实 dogfood 验证产物质量;② **M2.6 = 确定性机械自修**(安全区/14px/对比度,首轮通过率 58%→≥85%)。
 > - 下面是 2026-06-07 的原始发现记录(已被上面落实,保留供追溯)。
 
+> **🟢 2026-06-08 第二次更新 — 下一步 = 跑 M2.5/M2.6 验证 dogfood(用户已选)。** 在插件会话里跑(需 Gemini OAuth);离线一致性已查:所有新脚本存在、`invoke-gemini-ppt.ts` 支持 `--image`+`--prompt`、125 测试全过。
+>
+> **跑什么**:挑一个**资产页密集**的主题(产品/品牌发布,如再来一版 `小米SU7发布会` 或换一个真实产品),触发 `asset.needed=true` 的封面/产品/设计页:
+> ```
+> /ppt-agent:ppt --pages=12 <资产页主题>
+> ```
+> **验收清单(逐条看,对应 M2.5/M2.6 的修复点)**:
+> 1. **真图出现**:打开某资产页的渲染 PNG / `output/index.html`,确认封面/产品页**真的嵌了真实照片**(有 `<image>`),不是手绘假物;`images-manifest.json` 有 `fetched`/`generated` 记录。(M2.5 核心)
+> 2. **缺图不造假**:搜不到图的资产页应是 `needs_real_image` 占位 + 在 Phase 6 样片预览门列出,而不是手绘假车。(M2.5)
+> 3. **样片预览门**:Phase 6 应先只出"封面+1资产页"样片让你过眼,确认后才批量——不再一口气跑完 12 页。(M2.5)
+> 4. **视觉审查真生效**:看 `reviews/gemini-raw-*.md`,资产页应有 **Asset Relevance & Professionalism 数值评分**(说明渲染→`--image` 看图跑通了),不是只评排版。(M2.5,堵 8.2 虚假高分)
+> 5. **机械自修生效**:slide-core 出图后应跑过 `svg-autofix`;字号无 <14、暗底文本对比度达标;**且没有把卡片/徽章上的深色文字或 hero 照片上的标题改糊**(M2.6 的"只会变好"——若发现某处被改坏,记下来,是回归)。
+> 6. **首轮通过率 / fix 轮次**:对比基线(首轮 58%、修复 0.8/页),看是否上升/下降;回贴 `review-manifest.json` + `slide-status.json` 精确化。
+>
+> **跑完回贴**:产物 `output/index.html` 观感 + 上面 6 条结论 + `review-manifest.json`/`slide-status.json`。据此再决定下一里程碑(P3 安全瘦版 / P4 资源注入 / 其它)。**别在验证前继续堆 P3+**(本文件下方"头号发现"正是这个教训)。
+
 > **给明天 clear 后的自己/接手者**:这是单一入口。读完这份就知道今晚做了什么、发现了什么、下一步干什么。
 > 相关文档:活路线图 `FUSION_ROADMAP.md`、基线结果 `plans/2026-06-07-fusion-m2-baseline-results.md`、M2 spec/plan(`specs/`、`plans/`)。
 > 记忆指针:`fusion-mainline-progress`、`living-roadmap-jit-plans`。
