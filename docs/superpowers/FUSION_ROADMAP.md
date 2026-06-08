@@ -28,14 +28,20 @@
 | M1 | `--stop-at` 灵活性 | ✅ 完成 | 分阶段停止 + 复用 --run-id 恢复 | P0 |
 | **M2** | **质量门控** | ✅ 代码完成 + 真实 dogfood 验证 | planning_validator + reviewer 页型上下文 + 方法论嵌入 | P0 |
 | **M2.5** | **🔴🔴 真实图片 + 视觉可用性门** | ✅ **代码完成(2026-06-08,子代理 TDD,97 测试全过)** | 混合图源(品牌实体联网搜图 / 抽象走 image-gen)· slide-core 放开 `<image>`+图主导版式 · 视觉审查(渲染→Gemini 看图,资产维度)· 人工预览门(样片+候选图,样片在前批量在后)。**剩**:用户在插件会话跑一次真实 dogfood 验证产物质量。 | M2(dogfood:产物不可用 + 审查虚假高分) |
-| **M2.6** | **机械自修(确定性)** | ⚪ **下一个(紧随 M2.5)** | slide-core 生成后确定性钳位:安全区/字号<14抬升/对比度修正 → 首轮通过率 58%→≥85% | M2.5 |
-| P3 | 排版 + 配色 | ⚪ 待办 | 7 级字号阶梯 + 60/30/10 配色校验(14px floor 被 M2.6 覆盖) | M2.6 |
+| **M2.6** | **机械自修(确定性)** | ✅ **代码完成(2026-06-08,子代理 TDD,125 测试)** | svg-autofix:字号下限/暗底文本对比度(色彩数学)/顶层 title·page-number 安全带钳位,**全部"只会变好"**(嵌套坐标/装饰/卡片文本/全出血 hero 标题一律不碰,交 Gemini)。slide-core 生成后先自修再校验。 | M2.5 |
+| P3 | 排版 + 配色 | ⚪ **下一个** | 7 级字号阶梯 + 60/30/10 配色校验(14px floor 已被 M2.6 覆盖) | M2.6 |
 | P4 | 资源注入 | ⚪ 待办 | Akxan 资源库 + Node assembler 按需注入 | M2;Akxan(已核实) |
 | P5 | PPTX 导出 | ⚪ 待办 | 方案 D MVP + 统一 ppt/export + 复用 storybook | bible-class Plan4 更佳 |
 | P6 | 智能配图 | ⚪ 待办 | 复用 skills/image-gen(Plan1 已完成) | Plan1 ✅ |
 | P7 | core 抽离 + MCP | ⚪ 待办 | core/(Node/TS)+ MCP server,大重构 | 最后做 |
 
-**当前推荐顺序**:M2 ✅ → **M2.5 真实图片+视觉门 ✅ 代码完成** → **M2.6 机械自修(下一个)** → P3 → P5(方案D MVP)→ P4 → P6 → P7。(B/F 收尾切片可选,插在任意处。)
+**当前推荐顺序**:M2 ✅ → M2.5 ✅ → M2.6 ✅ → **P3 排版+配色(下一个)** → P5(方案D MVP)→ P4 → P6 → P7。(B/F 收尾切片可选;可选 M2.7=review-core 效率调优,按需插入。)
+
+### ✅ M2.6 — 确定性机械自修(代码完成 2026-06-08)
+**spec/plan**:`specs/2026-06-08-fusion-m2.6-deterministic-autofix-design.md` + `plans/2026-06-08-fusion-m2.6-deterministic-autofix.md`。
+**核心设计原则**:每个自修都"只会变好、绝不变坏"。**自审 + 集成烟测 + 对抗式终审接连抓到三类"修了反而更糟"并修掉**:① 暗底"最坏面"启发式会误改卡片/徽章上的深色文字(实测 slide-06 把 #22d3ee 徽章上的深色"2"改糊)→ 改为只修顶层文本 vs 页背景;② 全出血 hero 标题(M2.5 特性)压在照片/蒙版上会被误判 → 有全出血 `<image>` 时跳过对比度修复交 Gemini;③ 自带 transform / `<a>`/`<switch>`/嵌套 svg 内的文本被误当顶层 → 收紧顶层判定。
+**已交付**:`color-contrast.js`(WCAG 亮度/对比度/调整)、`svg-autofix.js`(字号下限 + 顶层文本对比度 + 顶层 role 安全带钳位)、CLI、slide-core 打 `data-role` 并生成后先自修再校验、validator 安全区收紧到顶层(去嵌套误报)。125 测试全过,真实 SVG 烟测不破坏嵌套坐标。
+**剩(用户)**:真实 dogfood 验证首轮通过率是否升、fix loop 是否降。
 
 ### ✅ M2.5 — 真实图片 + 视觉可用性门(代码完成 2026-06-08)
 **spec/plan(单一来源)**:`specs/2026-06-08-fusion-m2.5-real-images-design.md` + `plans/2026-06-08-fusion-m2.5-real-images.md`。
