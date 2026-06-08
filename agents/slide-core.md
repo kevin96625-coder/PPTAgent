@@ -85,6 +85,9 @@ Check all `fill`, `stroke`, and `stop-color` usage against the 3-zone model:
 - Zone 3 arbitrary colors are allowed only inside `<g data-decorative="true">...</g>` or inside `<defs>`.
 If any non-token color appears outside these allowances, fix the SVG before proceeding.
 
+### 6. Asset Presence (asset pages only)
+If the outline page for this slide has `asset.needed=true`: confirm the SVG contains an `<image>` element whose `href` references a file that actually exists in `${run_dir}/images/`. If the image is present, the check passes. If no real image is available, set `needs_real_image: true` for this slide in `slide-status.json`, keep a styled placeholder (framed rect + caption) in the SVG, and do NOT substitute a hand-drawn product/logo/person — leave the placeholder so the preview gate and the reviewer can surface the gap. Data pages (`asset.needed` false/absent) skip this check.
+
 If any check fails, fix the SVG and re-validate before proceeding. These checks are cheaper than a full Gemini review and catch the most common AI SVG generation errors, including broken color scoping.
 
 ## Communication
@@ -94,7 +97,7 @@ If any check fails, fix the SVG and re-validate before proceeding. These checks 
 
 ## SVG Requirements
 - `viewBox="0 0 1280 720"` — fixed 16:9 aspect ratio.
-- No external image references — all graphics must be inline SVG.
+- **Images:** Data/vector pages stay fully inline SVG (charts, metrics, Bento cards). **Asset pages** — pages whose outline entry has `asset.needed=true` — MAY embed one real raster image via `<image href="images/slide-NN.jpg" .../>`. Use a **relative path** (`images/slide-NN.jpg` or `.png`): the file is fetched/generated upstream by research-core into `${run_dir}/images/`, and the delivery phase copies that folder next to the SVGs so the relative reference resolves. Keep the `href` a file path — never inline a base64 data URI (it bloats the SVG and blows the Gemini review token budget). **Never hand-draw a fake product, logo, car, or person（禁止手绘假的实物/品牌/人物）.** If an `asset.needed=true` page has no real image available in `${run_dir}/images/`, leave a styled placeholder (a neutral framed rect with the caption) and flag `needs_real_image` — 绝不手绘冒充真实实物的图,do NOT substitute a hand-drawn imitation of the real thing.
 - Use `<text>` with proper font-family from style tokens.
 - Card backgrounds use `<rect>` with rounded corners from style tokens.
 - Shadows via SVG `<filter>` elements.
@@ -104,6 +107,20 @@ If any check fails, fix the SVG and re-validate before proceeding. These checks 
   - **Zone 3 — Decorative Free**: Gradients, glows, abstract shapes, pattern fills, and decorative SVG elements MAY use arbitrary colors. These elements MUST carry `data-decorative="true"` attribute OR be enclosed within a `<defs>` block. Colors defined in `<defs>` are implicitly decorative unless reused by core UI or data marks.
 - For heavy-decoration styles (glows, blobs, mesh backgrounds, confetti, abstract shapes), wrap the entire decorative cluster in a parent `<g data-decorative="true">` rather than tagging each child individually.
 - When generating slides with CJK (Chinese/Japanese/Korean) text, apply CJK-specific rules from `svg-generator.md` CJK Text Handling section. Use `cjk_font` from style tokens in the font-family chain.
+
+## Image-Led Layout Recipes (asset pages)
+
+When a page has `asset.needed=true` and a real image is present in `${run_dir}/images/`, design the slide *around* the photo rather than treating it as a small inset. Pick one of these recipes based on the page's role and the image's composition:
+
+- **Full-bleed hero** (best for covers and single-product showcases): place `<image href="images/slide-NN.jpg" x="0" y="0" width="1280" height="720" preserveAspectRatio="xMidYMid slice"/>` so the photo fills the entire 1280×720 canvas with no letterboxing. Because text directly on a photo is rarely legible, overlay a **gradient scrim**: a `<rect>` filling the region behind the text, painted with a `<linearGradient>` that fades from a translucent dark (e.g. `rgba(0,0,0,0.65)`) at the text edge to transparent toward the image. Wrap the scrim and gradient in `<g data-decorative="true">` (or define the gradient in `<defs>`) so it stays in Zone 3. Put the title/subtitle on top of the scrim, anchored to the darkened band, and verify text-vs-scrim contrast meets the legibility floor.
+- **Image + text split (图文分栏)**: split the canvas into an image column and a text column (e.g. image on 0–620, text on 660–1220, or the reverse). Render the image into a rounded-corner inset cropped to the column's aspect ratio with `preserveAspectRatio="xMidYMid slice"` (clip to a rounded `<clipPath>` so corners match the deck's card radius). Keep the text column on a solid token background so copy stays crisp and unburdened by the photo.
+- **Inset-with-scrim card**: embed the image inside a Bento card, then lay a localized scrim (a semi-transparent dark `<rect>` or corner vignette, `data-decorative="true"`) only under the text that sits on the image, leaving the rest of the photo clear.
+
+**Image treatment rules (apply to every embedded photo):**
+- **Crop, don't squash.** Always set `preserveAspectRatio="xMidYMid slice"` and size the `<image>` box to the target region so the photo fills it by cropping, never by distorting. Avoid `meet` (it letterboxes) unless the layout intentionally frames the whole image.
+- **Dark-background handling.** On dark slide backgrounds, prefer a transparent-background PNG (cut-out product/logo) so the subject floats cleanly; if only a rectangular photo is available, frame it on a card or add a subtle border/shadow so it doesn't bleed into the dark canvas. On light backgrounds the reverse holds.
+- **Legibility first.** Any text placed over a photo MUST sit on a scrim, solid panel, or sufficiently uniform region of the image — never raw text on a busy photo.
+- **Deck-wide consistency.** Keep the photographic style coherent across the deck: don't mix real photography on one page with obviously AI-rendered imagery on the next where it reads as inconsistent. Match corner radius, border treatment, and scrim style across all asset pages so the deck feels like one designed system.
 
 ## Verification
 - Output SVG is valid XML with correct viewBox.
