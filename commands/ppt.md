@@ -229,7 +229,7 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
 
 **Ordering — sample first, batch second**: Phase 6 begins with **Step A — Sample & Preview Gate (样片)**: slide-core designs only a sample (cover + one asset page), it is rendered to PNG, and a human preview Hard Stop confirms the visual direction and imagery. Only after that does **Step B — Batch Design (批量)** generate the rest of the deck. Never run the batch before the sample preview gate is confirmed.
 
-**Pipeline optimization**: Do not wait for all drafts to complete. As soon as `draft_slides_ready(indices=[...])` is received, launch slide-core for each slide in the batch. Use a sliding window of `min(3, remaining_slides)` parallel slide-core agents to balance throughput and resource usage.
+**Pipeline optimization (Step B only)**: This applies to **Step B — Batch Design**, after the preview gate is confirmed — never before it. Within Step B, do not wait for all drafts to complete: as soon as `draft_slides_ready(indices=[...])` is received for the remaining (non-sample) slides, launch slide-core for each. Use a sliding window of `min(3, remaining_slides)` parallel slide-core agents to balance throughput and resource usage.
 
 **Incremental progress tracking**: Maintain `${RUN_DIR}/slide-status.json` throughout Phase 6 using an atomic write protocol. After each slide completes its design→review cycle (`passed` or `accepted_with_warning`), update the full JSON object and rewrite the checkpoint atomically. Do not append raw text directly to `slide-status.json`.
 
