@@ -101,3 +101,11 @@ test('gemini-cli reviewer prompt includes asset relevance/professionalism dimens
 test('gemini-cli reviewer documents optional --image vision input for asset pages', () => {
   assert.match(GEMINI, /--image/);
 });
+
+test('Phase 7 delivery copies images/ into output/ so SVG/html resolve', () => {
+  const p7 = PPT.match(/## Phase 7:[\s\S]*$/);
+  assert.ok(p7, 'Phase 7 exists');
+  assert.match(p7[0], /images\//);
+  assert.match(p7[0], /output\//);
+  assert.match(p7[0], /cp|copy|拷贝/i);
+});

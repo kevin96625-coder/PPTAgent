@@ -425,11 +425,14 @@ deliver the partial result and STOP — do **not** continue to the next phase:
 
 1. **Read review manifest** (`${RUN_DIR}/review-manifest.json`) to determine delivery scope and quality status.
 
-2. Collect all final SVGs into `${RUN_DIR}/output/`:
+2. Collect all final SVGs into `${RUN_DIR}/output/`, and copy the image assets alongside them:
    ```bash
    mkdir -p "${RUN_DIR}/output"
    cp "${RUN_DIR}/slides/"*.svg "${RUN_DIR}/output/"
+   # Copy real image assets so relative <image href="images/..."> in the SVGs and index.html resolve.
+   if [ -d "${RUN_DIR}/images" ]; then cp -R "${RUN_DIR}/images" "${RUN_DIR}/output/images"; fi
    ```
+   The asset pages reference their photos by **relative path** (`images/slide-NN.jpg`), so the `images/` folder MUST sit next to the delivered SVGs and `index.html` inside `output/` — otherwise the embedded images break when the deck is opened from `output/`.
 
 3. **Generate HTML preview page** (`${RUN_DIR}/output/index.html`):
    1. Read the template from `skills/_shared/assets/preview-template.html` (relative to plugin root).
