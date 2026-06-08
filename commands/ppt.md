@@ -227,6 +227,8 @@ Generate professional PPT slides as SVG files (1280x720) through a structured mu
 
 ## Phase 6: Design Draft (设计稿) + Gemini Review
 
+**Ordering — sample first, batch second**: Phase 6 begins with **Step A — Sample & Preview Gate (样片)**: slide-core designs only a sample (cover + one asset page), it is rendered to PNG, and a human preview Hard Stop confirms the visual direction and imagery. Only after that does **Step B — Batch Design (批量)** generate the rest of the deck. Never run the batch before the sample preview gate is confirmed.
+
 **Pipeline optimization**: Do not wait for all drafts to complete. As soon as `draft_slides_ready(indices=[...])` is received, launch slide-core for each slide in the batch. Use a sliding window of `min(3, remaining_slides)` parallel slide-core agents to balance throughput and resource usage.
 
 **Incremental progress tracking**: Maintain `${RUN_DIR}/slide-status.json` throughout Phase 6 using an atomic write protocol. After each slide completes its design→review cycle (`passed` or `accepted_with_warning`), update the full JSON object and rewrite the checkpoint atomically. Do not append raw text directly to `slide-status.json`.
@@ -255,6 +257,29 @@ Format after each successful update:
 On `--run-id` resume: delete any leftover `${RUN_DIR}/slide-status.tmp.json`, then read only the validated `${RUN_DIR}/slide-status.json`. Skip slides already marked `passed` or `accepted_with_warning`, and continue from the first incomplete slide.
 
 **MANDATORY**: For EVERY slide, the lead MUST run BOTH slide-core (design) AND review-core (review) before proceeding. Do NOT skip per-slide review. Do NOT jump to holistic review or Phase 7 until every slide has a `reviews/review-{nn}.md` file. Per-slide review is the core value of Phase 6 — without it, the entire dual-model architecture is wasted.
+
+### Phase 6 · Step A — Sample & Preview Gate (Hard Stop)
+
+Before committing to the full batch, produce a **sample (样片)** and run a human **preview gate**. This is the single most important safeguard against a full-deck run being wasted on the wrong visual direction or fake/missing imagery (the dogfood "1h53m full run thrown away" failure). The sample is rendered and shown to the user **BEFORE** any batch design happens.
+
+1. **Generate the sample only** — slide-core produces just two slides: the **cover** plus **one representative asset page** (the first page with `asset.needed=true`). Do NOT design the rest of the deck yet.
+   ```text
+   Task(subagent_type="ppt-agent:slide-core", prompt="run_dir=${RUN_DIR} mode=design slide_index=${COVER_N} style=${STYLE}")
+   Task(subagent_type="ppt-agent:slide-core", prompt="run_dir=${RUN_DIR} mode=design slide_index=${ASSET_N} style=${STYLE}")
+   ```
+2. **Render the sample to PNG** so the user sees the actual rendered result, not raw SVG:
+   ```bash
+   node skills/_shared/scripts/render-svg-cli.js "${RUN_DIR}/slides/slide-${COVER_N}.svg" "${RUN_DIR}/reviews/sample-${COVER_N}.png"
+   node skills/_shared/scripts/render-svg-cli.js "${RUN_DIR}/slides/slide-${ASSET_N}.svg" "${RUN_DIR}/reviews/sample-${ASSET_N}.png"
+   ```
+3. **Compute the missing-image list** — use `assetPlan(outline, manifest)` from `skills/_shared/scripts/lib/asset-plan.js` against `${RUN_DIR}/outline.json` + `${RUN_DIR}/images-manifest.json` to derive `needs_real_image`. Present to the user, in one shot: the rendered **sample PNGs** (to confirm style), **all asset-page candidate images** found under `${RUN_DIR}/images/` (to confirm the photos are right), and the **缺图清单 (`needs_real_image` / `status:missing` pages)**.
+4. **Hard Stop — wait for the user.** The user may: accept the direction / replace a specific page's image / drop an official image into `${RUN_DIR}/images/` (and update `images-manifest.json`) / accept an abstract treatment for a page that has no real image. Do NOT proceed to batch design until the user confirms.
+
+This gate coordinates with `--stop-at`: it is an observable stop point (akin to `--stop-at=preview`), and a `--run-id` resume re-enters it until confirmed.
+
+### Phase 6 · Step B — Batch Design
+
+Only **after** the preview gate is confirmed, slide-core designs the remaining pages in **batch (批量)**, reusing the confirmed visual direction. Pages whose real image is still `missing` keep a styled placeholder and are flagged `needs_real_image` — never hand-draw a fake substitute.
 
 For each slide (or in batches):
 

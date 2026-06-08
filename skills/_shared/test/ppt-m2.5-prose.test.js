@@ -57,3 +57,18 @@ test('research-core fetches brand-entity images and generates scene images', () 
 test('research-core image fetch is best-effort (missing does not block)', () => {
   assert.match(RESEARCH_CORE, /missing|尽力|best-effort|不阻塞|degrade/i);
 });
+
+const PPT = read('../../../commands/ppt.md');
+
+test('Phase 6 runs a sample-slide preview Hard Stop BEFORE batch design', () => {
+  const p6 = PPT.match(/## Phase 6:[\s\S]*?(?=\n## Phase 7:)/);
+  assert.ok(p6, 'Phase 6 exists');
+  assert.match(p6[0], /样片|sample/i);
+  assert.match(p6[0], /render-svg-cli|render-svg|\.png/);
+  assert.match(p6[0], /needs_real_image|缺图|missing/);
+  assert.match(p6[0], /Hard Stop|预览门|preview gate/i);
+  // sample must precede batch
+  const sampleIdx = p6[0].search(/样片|sample/i);
+  const batchIdx = p6[0].search(/批量|batch/i);
+  assert.ok(sampleIdx > -1 && batchIdx > -1 && sampleIdx < batchIdx, 'sample before batch');
+});
