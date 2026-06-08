@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
-const { validateOutline } = require('../scripts/lib/planning-validator');
+const { validateOutline, ASSET_KINDS } = require('../scripts/lib/planning-validator');
 const targets = require('../references/density-targets.json');
 
 const VALID = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/outline-valid.json'), 'utf8'));
@@ -155,4 +155,36 @@ test('robust: null part element -> hard error, no throw', () => {
   assert.doesNotThrow(() => { r = run(o); });
   assert.strictEqual(r.ok, false);
   assert.ok(r.hard_errors.some((e) => /parts\[1\]/.test(e.field) || /not an object/.test(e.msg)));
+});
+
+// --- M2.5 Task 1: outline asset field validation ---
+// inject asset onto the first part-page (index 1 = the cover/image page)
+function withPageAsset(asset) {
+  const o = clone(VALID);
+  o.parts[0].pages[0].asset = asset;
+  return o;
+}
+
+test('asset: missing asset object is allowed (optional field)', () => {
+  const r = validateOutline(clone(VALID));
+  assert.ok(!r.hard_errors.some((e) => e.field && String(e.field).startsWith('asset')));
+});
+
+test('asset: invalid kind is a hard error', () => {
+  const r = validateOutline(withPageAsset({ needed: true, kind: 'bogus', query: 'x' }));
+  assert.ok(r.hard_errors.some((e) => e.field === 'asset.kind'));
+});
+
+test('asset: needed=true with brand-entity requires non-empty query', () => {
+  const r = validateOutline(withPageAsset({ needed: true, kind: 'brand-entity', query: '' }));
+  assert.ok(r.hard_errors.some((e) => e.field === 'asset.query'));
+});
+
+test('asset: needed=false needs no query', () => {
+  const r = validateOutline(withPageAsset({ needed: false, kind: 'none' }));
+  assert.ok(!r.hard_errors.some((e) => e.field && String(e.field).startsWith('asset')));
+});
+
+test('ASSET_KINDS exported vocabulary', () => {
+  assert.deepEqual([...ASSET_KINDS].sort(), ['brand-entity', 'none', 'scene']);
 });

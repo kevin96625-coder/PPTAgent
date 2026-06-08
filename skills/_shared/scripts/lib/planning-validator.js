@@ -10,6 +10,7 @@ const LAYOUT_TYPES = [
   'single_focus', 'two_column_symmetric', 'two_column_asymmetric', 'three_column',
   'hero_grid', 'mixed_grid', 'timeline', 'dashboard', 'horizontal_split', 'full_bleed',
 ];
+const ASSET_KINDS = new Set(['brand-entity', 'scene', 'none']);
 
 function countDataElements(de) {
   if (Array.isArray(de)) return de.length;
@@ -105,6 +106,22 @@ function validateOutline(outline, opts = {}) {
     if (layout == null) W(id, 'layout', 'warn', 'missing layout_type');
     else if (!LAYOUT_TYPES.includes(layout)) W(id, 'layout', 'warn', `layout "${layout}" not in the 10 canonical layout_type values`);
 
+    if ('asset' in pg && pg.asset != null) {
+      const a = pg.asset;
+      if (typeof a !== 'object') {
+        E(id, 'asset', 'asset must be an object');
+      } else {
+        if ('kind' in a && !ASSET_KINDS.has(a.kind)) {
+          E(id, 'asset.kind', `invalid asset.kind "${a.kind}" (expected brand-entity|scene|none)`);
+        }
+        if (a.needed === true && (a.kind === 'brand-entity' || a.kind === 'scene')) {
+          if (!a.query || String(a.query).trim() === '') {
+            E(id, 'asset.query', 'asset.needed=true requires a non-empty query');
+          }
+        }
+      }
+    }
+
     if (PAGE_TYPES.includes(pg.type) && Array.isArray(pg.key_points) && targets[pg.type]) {
       const t = targets[pg.type];
       const kp = pg.key_points.length;
@@ -171,4 +188,4 @@ function validateOutline(outline, opts = {}) {
 
 // validateOutline is the entry point; the *_TYPES arrays are exported as the canonical
 // validated-enum vocabulary for reuse by future consumers (e.g. planning_review).
-module.exports = { validateOutline, PAGE_TYPES, VISUAL_WEIGHTS, END_PAGE_TYPES, LAYOUT_TYPES };
+module.exports = { validateOutline, PAGE_TYPES, VISUAL_WEIGHTS, END_PAGE_TYPES, LAYOUT_TYPES, ASSET_KINDS };
