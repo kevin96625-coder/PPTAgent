@@ -489,7 +489,35 @@ deliver the partial result and STOP — do **not** continue to the next phase:
    ```
    Include total estimated presentation time at the bottom.
 
-5. **Open preview** in the user's default browser (platform-adaptive):
+5. **Export editable PPTX** (`${RUN_DIR}/output/presentation.pptx`) — **additive / 尽力而为, MUST NOT block delivery** (P5, 方案D: native editable-SVG embed):
+
+   The exporter lives in the sibling **workflow-san** repo (`html-slide-to-pptx`, where `pptxgenjs` is installed). Locate it by relative path from the plugin root and **probe for existence first**. If the exporter, its `node_modules`, or Chrome are missing, **SKIP this step with a one-line note** — the SVG/HTML/notes deliverables above are the guaranteed delivery; the `.pptx` is a best-effort extra.
+
+   ```bash
+   # Locate workflow-san sibling repo (adjust if your checkout layout differs).
+   EXPORTER=""
+   for cand in \
+     "../ppt-agent-workflow-san/html-slide-to-pptx/scripts/svg-deck-to-pptx.js" \
+     "../../ppt-agent-workflow-san/html-slide-to-pptx/scripts/svg-deck-to-pptx.js"; do
+     if [ -f "$cand" ]; then EXPORTER="$cand"; break; fi
+   done
+   RENDER_CLI="skills/_shared/scripts/render-svg-cli.js"   # relative to plugin root; supplies real PNG fallback when Chrome present
+   if [ -n "$EXPORTER" ]; then
+     node "$EXPORTER" \
+       --in "${RUN_DIR}/output" \
+       --out "${RUN_DIR}/output/presentation.pptx" \
+       --title "<deck title from outline.json>" \
+       --render-svg-cli "$RENDER_CLI" \
+     && echo "Wrote ${RUN_DIR}/output/presentation.pptx" \
+     || echo "NOTE: presentation.pptx export failed — SVG/HTML delivery unaffected."
+   else
+     echo "NOTE: svg-deck-to-pptx exporter not found (workflow-san missing) — skipping .pptx, SVG/HTML delivery unaffected."
+   fi
+   ```
+
+   The exporter inlines each asset page's relative `<image href="images/...">` into the embedded SVG (so images don't break inside the isolated pptx media part) and embeds every page as a native editable SVG plus a PNG fallback. **Add this line to the delivery summary / README**: "`presentation.pptx` — open in **PowerPoint 2016+** to verify the slides are editable (each page is a selectable SVG). This session verifies only the pptx file structure; actual PowerPoint rendering/editability/font/CJK fidelity is user-verified." If Chrome is unavailable the PNG thumbnails fall back to a placeholder (the native SVG is still embedded) — note this only if it occurred.
+
+6. **Open preview** in the user's default browser (platform-adaptive):
    ```bash
    # macOS
    open "${RUN_DIR}/output/index.html"
@@ -500,7 +528,7 @@ deliver the partial result and STOP — do **not** continue to the next phase:
    ```
    Detect platform via `$OSTYPE` or `uname` and use the appropriate command.
 
-6. Print final summary (sourced from `review-manifest.json`):
+7. Print final summary (sourced from `review-manifest.json`):
    - Total slides generated
    - Style applied
    - Review engine used (Gemini / Claude self-review)
@@ -510,7 +538,17 @@ deliver the partial result and STOP — do **not** continue to the next phase:
    - Average quality score
    - File paths to output SVGs
    - Preview URL: `${RUN_DIR}/output/index.html`
+   - Editable PPTX (if exported): `${RUN_DIR}/output/presentation.pptx` (open in PowerPoint 2016+ to verify editability)
    - Resume command: `/ppt-agent:ppt --run-id=${CHANGE_ID}`
+
+## `ppt/export` — unified export facade
+
+The delivery phase exposes a single conceptual export門面 for turning a finished deck into an editable Office file. It has two input paths:
+
+- **SVG input → 方案D (this milestone, P5)**: the `/ppt` workflow's `output/slide-NN.svg` pages are embedded as **native editable SVG** (`asvg:svgBlip`, the MS 2016 SVG extension) plus a PNG fallback, via workflow-san's `svg-deck-to-pptx` exporter (Phase 7 step 5 above). One full-bleed SVG per slide, 13.333×7.5in. This is the path `/ppt` uses.
+- **HTML input → storybook preset (pre-existing)**: structured HTML slides (e.g. the bible-class storybook deck) map to semantic pptx shapes via workflow-san's `compose_pptx.js` + `storybook_preset.js`. Cross-reference: this is the existing HTML→pptx route and is **unchanged** by P5; the MVP only implements the SVG path.
+
+Both routes are **additive / 尽力而为**: a missing exporter, missing `node_modules`, or missing Chrome causes the `.pptx` step to be **skipped with a note**, never blocking the SVG/HTML/notes delivery. Structural correctness (valid zip, `svgBlip`, media parts, content-types) is verified in-session; **PowerPoint rendering/editability/fidelity is user-verified**.
 
 ## Quality Gates
 

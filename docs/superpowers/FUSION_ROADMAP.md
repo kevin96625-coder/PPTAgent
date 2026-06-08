@@ -30,12 +30,26 @@
 | **M2.5** | **🔴🔴 真实图片 + 视觉可用性门** | ✅ **代码完成(2026-06-08,子代理 TDD,97 测试全过)** | 混合图源(品牌实体联网搜图 / 抽象走 image-gen)· slide-core 放开 `<image>`+图主导版式 · 视觉审查(渲染→Gemini 看图,资产维度)· 人工预览门(样片+候选图,样片在前批量在后)。**剩**:用户在插件会话跑一次真实 dogfood 验证产物质量。 | M2(dogfood:产物不可用 + 审查虚假高分) |
 | **M2.6** | **机械自修(确定性)** | ✅ **代码完成(2026-06-08,子代理 TDD,125 测试)** | svg-autofix:字号下限/暗底文本对比度(色彩数学)/顶层 title·page-number 安全带钳位,**全部"只会变好"**(嵌套坐标/装饰/卡片文本/全出血 hero 标题一律不碰,交 Gemini)。slide-core 生成后先自修再校验。 | M2.5 |
 | **P3** | **排版 + 配色(安全瘦版)** | ✅ **代码完成(2026-06-08,子代理 TDD+对抗审核,176 测试)** | 7 级字号阶梯 + 60/30/10 配色:**纯增益**——生成期引导(style YAML `typography_ladder`/`color_ratio`)+ **软警告专用**确定性校验器(`type-scale.js`/`color-ratio.js`,只读、永不改写 SVG、永不硬阻塞、exit 恒 0),补 Gemini 看不到的角度(数字号种数)。**零回退面**(结构性保证)。 | M2.6 |
-| P4 | 资源注入 | ⚪ **下一个** | Akxan 资源库 + Node assembler 按需注入 | M2;Akxan(已核实) |
-| P5 | PPTX 导出 | ⚪ 待办 | 方案 D MVP + 统一 ppt/export + 复用 storybook | bible-class Plan4 更佳 |
+| **P4** | **资源注入(Akxan 适配移植 + 轻量选择器)** | ✅ **代码完成(2026-06-08,适配移植+TDD+对抗审核,234 测试)** | 从 Akxan(MIT©sunbigfly)**适配移植**(非复制):failure-modes/design-cheatsheet/blocks/charts-catalog/color-psychology/layout-craft 六份——全部改写到本仓库**纯 SVG 模型 + outline schema**,不碰 layout 枚举;`reference-selector.js` 轻量按页型选增补 reference(替代重型 token assembler);index 注册 + ATTRIBUTIONS 署名。 | M2;Akxan(已核实) |
+| **P5** | **PPTX 导出(方案D:SVG 原生嵌入 MVP)** | ✅ **MVP 代码完成(2026-06-08,验过 pptxgenjs SVG API + 结构化 TDD,workflow-san 24 测试全过);PowerPoint 保真待用户实测(D vs A 待定)** | workflow-san `svg-deck-to-pptx.js`:每页 SVG 经外链图内联(`inline-svg-images.js`)→ pptxgenjs `addImage` 原生 `asvg:svgBlip` + 真实 PNG 兜底(zip 后处理换掉 pptxgenjs Node 端坏 svg-png);`commands/ppt.md` Phase 7 additive 接线(失败不阻塞);`ppt/export` 门面文档(SVG→方案D / HTML→storybook)。**仅验 zip/XML 结构,PowerPoint 可编辑/保真=用户验**。 | bible-class Plan4 更佳;pptxgenjs SVG API 已核实 |
 | **P6** | **跨页配图一致性 + 审查驱动重绘(post-M2.5 精简版)** | ✅ **代码完成(2026-06-08,TDD,203 测试全过(含 P6 新增 26:asset-consistency 7 + redo-plan 6 + prose 6 + validator 3 + manifest 4))** | 跨页同主体一致性(`asset.subject`/归一化 query 分组,master-first→`--reference` 派生)+ 审查驱动 `--redo` 重绘闭环(资产维度 <6 → scene 换新 seed 重绘封顶 2、brand-entity 回预览门重搜、触顶保留占位 `needs_real_image` 不假图)。两个纯逻辑只读规划库 `asset-consistency.js`/`redo-plan.js`(不调 generate.js、不抛错)。 | M2.5;image-gen `--reference`/`--redo`/`--seed` ✅ |
 | P7 | core 抽离 + MCP | ⚪ 待办 | core/(Node/TS)+ MCP server,大重构 | 最后做 |
 
-**当前推荐顺序**:M2 ✅ → M2.5 ✅ → M2.6 ✅ → P3 ✅ → P6 ✅ → **P4 资源注入(下一个)** → P5(方案D MVP,保真实测需用户机器)→ P7(留用户拍板)。(B/F 收尾切片可选;可选 M2.7=review-core 效率调优,按需插入。)
+**当前推荐顺序**:M2 ✅ → M2.5 ✅ → M2.6 ✅ → P3 ✅ → P6 ✅ → P4 ✅ → P5 ✅(方案D MVP 代码完成;**用户单次 dogfood 验 PowerPoint 保真后定 D vs A**)→ **P7(留用户拍板)**。(B/F 收尾切片可选;可选 M2.7=review-core 效率调优,按需插入。)
+
+### ✅ P5 — PPTX 导出(方案D:SVG 原生嵌入 MVP,代码完成 2026-06-08)
+**spec/plan**:`specs/2026-06-08-fusion-p5-pptx-export-design.md` + `plans/2026-06-08-fusion-p5-pptx-export.md`。
+**核心认知(本会话核实)**:pptxgenjs `addImage` 收到 SVG data URI 时**自动**产出 `asvg:svgBlip`(MS 2016 SVG 扩展)+ `image/svg+xml` 媒体 + svg ContentType——故方案D 无需手搓 OOXML。**但** Node 端 pptxgenjs 无法光栅化,自动 PNG 兜底被写成"SVG 字节冒充 png"(坏兜底)→ 导出器**后处理 zip**,把每页坏 `image-N-1.png` 换成真实/占位 PNG,保持 svgBlip 不变。
+**已交付**:① workflow-san `scripts/svg-deck-to-pptx.js`(枚举 slide-NN.svg 数字排序、共享单 PptxGenJS 实例全幅 13.333×7.5in、容错单页不中断);② `scripts/inline-svg-images.js`(相对 `<image href>`→base64 data URI,缺文件不抛仅告警);③ `test/svg-deck-to-pptx.test.js`(unzip 断言 svgBlip/svg+png 媒体/svg ContentType/页数/内联 href,6 测试;全仓 24 测试全过);④ `commands/ppt.md` Phase 7 step 5 additive/尽力而为接线(导出器/Chrome 缺失→跳过+提示,不阻塞 SVG/HTML 交付)+ `ppt/export` 门面文档(SVG→方案D / HTML→storybook 交叉引用);⑤ dogfood 入口加 P5 验收清单。
+**降级**:无 Chrome/无预渲染 PNG → 占位 PNG(老 viewer/缩略图空白,原生 SVG 仍可编辑),导出告警不中断。
+**剩(用户)**:PowerPoint 2016+ 打开 `presentation.pptx` 验:每页显示?SVG 可点选编辑(非光栅化)?中文/字体?资产图在?保真够用→D 收官;不够→记差距评估方案A。**本会话只验 zip/XML 结构,不声称"已可用"**。
+
+### ✅ P4 — 资源注入(Akxan 适配移植 + 轻量选择器,代码完成 2026-06-08)
+**spec/plan**:`specs/2026-06-08-fusion-p4-resource-injection-design.md` + `plans/2026-06-08-fusion-p4-resource-injection.md`。
+**核心修正(活路线图)**:① Akxan 是 HTML/CSS→截图管线,本仓库纯 SVG → **移植即适配**,不照搬代码;② 重型 token assembler 是过度工程(agent 现读整文件无 tokenizer 必要)→ 改**轻量选择器**(按页型返 reference ID 列表)。
+**已交付**:① 六份适配移植 reference(`principles/failure-modes.md` 8 类失败模式+修复优先序、`design-cheatsheet.md` CRAP→本仓库 outline 字段、`blocks.md` 8 组件设计灵魂+SVG 落地提示、`charts-catalog.md` 分类法+新图型 SVG 骨架、`color-psychology.md` 60/30/10 呼应 P3、`layout-craft.md` 重力场画法且显式不改枚举);② `ATTRIBUTIONS.md`(Akxan MIT©2025 sunbigfly);③ index.json 注册六条(新域 principle/block/chart/craft,v1.2.0);④ `reference-selector.js`+CLI+测试(按 type/layout_type/data_elements 选增补 ref,上限 4,坏 index 优雅降级不抛错);⑤ slide-core/content-core/review-core 接线(核心必读固定,selector 加增补;review-core QA 固定读 failure-modes)。234 测试全过。
+**对抗审核抓到并已修**:🔴 index `total_count.craft` 漏计(1→2)且测试固化错值 → 修计数+加防漂移测试;🔴/⚠️ selector 路由用了不存在的页型(section/timeline-as-type)→ 删伪分支 + 改用 `layout_type∈{single_focus,hero_grid,full_bleed}` 让正文页也能取 layout-craft;⚠️ blocks `url(#shadow)`→`#card-shadow`、裸 `clip-path` 补 `url(#avatar)`+clipPath;⚠️ charts gauge 静态示例数值对齐。
+**剩(用户)**:dogfood 看数据页是否引入更专业 SVG 图型、失败模式指导是否降低"装饰多于信息"、页内上下文未爆炸。
 
 ### ✅ P6 — 跨页配图一致性 + 审查驱动重绘(精简版,代码完成 2026-06-08)
 **spec/plan**:`specs/2026-06-08-fusion-p6-image-consistency-redo-design.md` + `plans/2026-06-08-fusion-p6-image-consistency-redo.md`。

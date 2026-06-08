@@ -140,3 +140,25 @@
 - **B/F 切片**(语义策划稿门控 / narrative-rhythm / pipeline-compat)——M2 推迟项,P3 之前可选。
 - **P3 排版+配色**——部分被"slide-core 硬化"覆盖(14px floor),剩 7 级字号阶梯 + 60/30/10 配色比例,排在硬化之后。
 - 这套流程**产出质量是好的**(8.2 均分、智驾高潮页 9.5),问题是贵和慢——下一步对症。
+
+---
+
+## P5 验收 — PPTX 导出(方案D:SVG 原生嵌入 MVP,2026-06-08)
+
+> 状态:**代码完成,结构化自验通过**(workflow-san `node --test` 全绿;对实跑 output 跑导出器 → 产出结构合法 `presentation.pptx`,含 `asvg:svgBlip` + 内联资产 + svg ContentType)。**PowerPoint 实测保真 = 用户单次 dogfood 验收**,据其结果定 方案D 是否够用 / 是否上 方案A。
+>
+> 交付器:workflow-san `html-slide-to-pptx/scripts/svg-deck-to-pptx.js`(+ `inline-svg-images.js`)。facade:`commands/ppt.md` Phase 7 step 5(additive/尽力而为,失败不阻塞)。
+
+**本会话只能验 zip/XML 结构,不能验 PowerPoint 渲染。** 请用户在 PowerPoint 2016+ 打开 `${RUN_DIR}/output/presentation.pptx`,按以下清单验收:
+
+- [ ] **每页都显示?**(幻灯片数 == SVG 页数,无空白页)
+- [ ] **SVG 可点选 / 可编辑?**(点一页,是否作为矢量图形被选中——而非被光栅化成一张死图;这是 方案D vs 退化成方案C 的关键判据)
+- [ ] **中文 / 字体正常?**(CJK 不豆腐块、不乱码;字体回退可接受)
+- [ ] **资产页图片在?**(原 `<image href="images/...">` 已内联为 data URI——产品/封面照应正常显示,不破图)
+- [ ] **整体保真够用?**(版式、留白、配色与 SVG/HTML 预览一致到"可交付"程度)
+
+**判定**:
+- 全部满足 → **方案D 收官**,P5 标 ✅;`ppt/export` SVG 路定稿。
+- 有项不满足 → **记录具体差距**(哪页 / 哪类元素失真 / 是否被光栅化 / 字体问题),据此**评估方案A**(svg2pptx 逐元素解析,仅在 方案D 实测保真不足时才投入)。
+
+**已知降级行为(非缺陷)**:无 Chrome / 无预渲染 PNG 时,PNG 兜底用占位图——*老 viewer / 缩略图* 可能空白,但**原生 SVG 仍嵌入可编辑**(PowerPoint 2016+ 走 svgBlip 不受影响)。导出时会告警。
