@@ -16,3 +16,8 @@ test('slide-core runs svg-autofix after generation, before validation', () => {
   const vIdx = SLIDE.search(/Post-Generation Validation/);
   assert.ok(aIdx > -1 && vIdx > -1 && aIdx < vIdx, 'autofix step before validation');
 });
+test('safe-area validation note scopes to top-level (avoids nested false positives)', () => {
+  const safe = SLIDE.match(/Safe Area[\s\S]*?(?=\n###|\n##|$)/);
+  assert.ok(safe, 'Safe Area section exists');
+  assert.match(safe[0], /top-level|顶层|transform/i);
+});

@@ -98,6 +98,8 @@ Flag any font-size below 14px for body text (12px acceptable only for labels/foo
 ### 4. Safe Area Boundary
 Verify no content elements are placed at x < 60, x > 1220, y < 40, or y > 680.
 
+Apply this boundary check **only to top-level elements** — direct children of the root `<svg>` with no `transform` ancestor. Elements nested inside a `<g transform="...">` use **local** coordinates that are intentionally offset by the group's transform; their raw `x`/`y` values look out-of-bounds but resolve to legitimate on-canvas positions, so they are **not** violations. Flagging them produces false positives that trigger unnecessary fix loops. (The Deterministic Auto-Fix step already clamps top-level role-tagged title/page-number for the same reason.)
+
 ### 5. Color Zone Compliance
 Check all `fill`, `stroke`, and `stop-color` usage against the 3-zone model:
 - Zone 1 core UI colors must resolve to semantic style tokens only.
