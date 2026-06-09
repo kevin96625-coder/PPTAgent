@@ -28,23 +28,28 @@ function esc(text) {
 
 /**
  * Render a complete storybook slide HTML string.
- * @param {{type:string, title:string, body:string, imageSrc?:string, subtext?:string}} opts
+ * @param {{type:string, title:string, body:string, imageSrc?:string, subtext?:string, scripture?:string, points?:string[], preset?:string}} opts
  * @returns {string}
  */
-function renderSlideHtml({ type, title, body, imageSrc, subtext }) {
+function renderSlideHtml({ type, title, body, imageSrc, subtext, scripture, points, preset = 'designed' }) {
   const imgBlock = imageSrc
     ? `  <div class="storybook-image">\n    <img src="${esc(imageSrc)}" alt="${esc(title)}">\n  </div>\n`
+    : '';
+  const pointsList = Array.isArray(points) ? points.filter(Boolean) : [];
+  const pointsBlock = pointsList.length
+    ? `    <ul class="caption-points">\n${pointsList.map((p) => `      <li>${esc(p)}</li>`).join('\n')}\n    </ul>\n`
     : '';
   const subtextBlock = subtext
     ? `    <p class="caption-subtext">${esc(subtext)}</p>\n`
     : '';
+  const scriptureAttr = scripture ? ` data-scripture="${esc(scripture)}"` : '';
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><title>${esc(title)}</title></head>
-<body data-preset="storybook" data-slide-type="${esc(type)}">
+<body data-preset="${esc(preset)}" data-slide-type="${esc(type)}"${scriptureAttr}>
 ${imgBlock}  <div class="storybook-caption">
     <h2 class="caption-title">${esc(title)}</h2>
-    <p class="caption-body">${esc(body)}</p>
+${pointsBlock}    <p class="caption-body">${esc(body)}</p>
 ${subtextBlock}  </div>
 </body>
 </html>`;
@@ -88,6 +93,7 @@ function composeStorybookHtml({ outline, imagesDir, slidesDir }) {
     title: outline.title || '主日学课程',
     body: outline.scripture_ref || '',
     imageSrc: coverImgSrc,
+    scripture: outline.scripture_ref || '',
   }), 'utf8');
   written.push(coverPath);
 
@@ -96,12 +102,17 @@ function composeStorybookHtml({ outline, imagesDir, slidesDir }) {
     const nn = pad2(scene.index);
     const imgSrc = `../images/scene-${nn}.png`;
     const slidePath = path.join(slidesDir, `slide-${nn}.html`);
+    const points = (Array.isArray(scene.key_points) && scene.key_points.length)
+      ? scene.key_points
+      : (scene.key_message ? [scene.key_message] : []);
     fs.writeFileSync(slidePath, renderSlideHtml({
       type: 'scene',
       title: scene.title || '',
       body: scene.narration || '',
       imageSrc: imgSrc,
       subtext: scene.interaction || '',
+      scripture: outline.scripture_ref || '',
+      points,
     }), 'utf8');
     written.push(slidePath);
   }

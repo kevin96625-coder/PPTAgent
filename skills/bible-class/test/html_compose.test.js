@@ -27,13 +27,13 @@ const minimalOutline = {
   memory_verse: { text: '你们也当彼此洗脚。', ref: '约翰福音 13:14' },
 };
 
-test('writes cover slide as slide-00.html with data-preset=storybook', () => {
+test('writes cover slide as slide-00.html with data-preset=designed', () => {
   const dir = tmpRun();
   const files = composeStorybookHtml({ outline: minimalOutline, imagesDir: path.join(dir, 'images'), slidesDir: path.join(dir, 'slides') });
   const coverPath = path.join(dir, 'slides', 'slide-00.html');
   assert.ok(fs.existsSync(coverPath), 'slide-00.html must exist');
   const html = fs.readFileSync(coverPath, 'utf8');
-  assert.match(html, /data-preset="storybook"/);
+  assert.match(html, /data-preset="designed"/);
   assert.match(html, /data-slide-type="cover"/);
   assert.match(html, /主日学：耶稣洗门徒的脚/);
   assert.match(html, /约翰福音 13:1-17/);
@@ -113,4 +113,46 @@ test('memory-verse slide uses max scene index + 1 (no collision with non-contigu
   assert.match(fs.readFileSync(path.join(slidesDir, 'slide-04.html'), 'utf8'), /data-slide-type="scene"/);
   assert.ok(fs.existsSync(path.join(slidesDir, 'slide-05.html')), 'memory-verse must be slide-05');
   assert.match(fs.readFileSync(path.join(slidesDir, 'slide-05.html'), 'utf8'), /data-slide-type="memory-verse"/);
+});
+
+// --- designed preset tests ---
+const { renderSlideHtml } = require('../lib/html_compose');
+
+test('renderSlideHtml 默认输出 designed preset + 要点 + 经文', () => {
+  const html = renderSlideHtml({ type: 'scene', title: '海水分开了', body: '天父刮起大风。', subtext: '一起喊：过红海！', scripture: '出埃及记 14', points: ['天父刮大风', '海水成墙'] });
+  assert.match(html, /data-preset="designed"/);
+  assert.match(html, /data-scripture="出埃及记 14"/);
+  assert.match(html, /<ul class="caption-points">/);
+  assert.match(html, /<li>天父刮大风<\/li>/);
+});
+
+test('composeStorybookHtml 把 scene.key_points 写进 designed HTML', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hc-'));
+  const imagesDir = path.join(dir, 'images');
+  const slidesDir = path.join(dir, 'slides');
+  fs.mkdirSync(imagesDir, { recursive: true });
+  const outline = {
+    title: '红海分开了', scripture_ref: '出埃及记 14',
+    teaching: { scenes: [
+      { index: 1, title: '辛苦做苦工', key_message: '以色列人做苦工', narration: '每天搬砖头。', interaction: '累不累呀？', key_points: ['搬重砖头', '做得慢会挨打'] },
+    ] },
+  };
+  const written = composeStorybookHtml({ outline, imagesDir, slidesDir });
+  const sceneHtml = fs.readFileSync(written.find((p) => p.endsWith('slide-01.html')), 'utf8');
+  assert.match(sceneHtml, /data-preset="designed"/);
+  assert.match(sceneHtml, /<li>搬重砖头<\/li>/);
+  assert.match(sceneHtml, /data-scripture="出埃及记 14"/);
+});
+
+test('缺 key_points 时回退到 key_message，不报错', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hc-'));
+  const imagesDir = path.join(dir, 'images');
+  const slidesDir = path.join(dir, 'slides');
+  fs.mkdirSync(imagesDir, { recursive: true });
+  const outline = { title: 'x', scripture_ref: 'y', teaching: { scenes: [
+    { index: 1, title: 't', key_message: '关键句', narration: 'n', interaction: 'i' },
+  ] } };
+  const written = composeStorybookHtml({ outline, imagesDir, slidesDir });
+  const sceneHtml = fs.readFileSync(written.find((p) => p.endsWith('slide-01.html')), 'utf8');
+  assert.match(sceneHtml, /<li>关键句<\/li>/);
 });
