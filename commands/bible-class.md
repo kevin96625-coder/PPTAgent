@@ -51,6 +51,7 @@ teacher approval before any images are generated.
         "index": 1,
         "title": "string",
         "key_message": "string",
+        "key_points": ["string (2-3条，每条幼儿可懂的动宾短句，用作右侧要点卡，如：天父刮大风 / 海水成两道墙)"],
         "narration": "string (3-5岁口语旁白)",
         "interaction": "string (互动提问)",
         "image_brief": "string (画面描述，供生图)"
