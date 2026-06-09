@@ -1,6 +1,6 @@
 ---
 name: bible-image-core
-description: "Orchestrates Phase 3-4 of /bible-class: style selection, master reference generation (hard stop), per-scene consistent illustration generation with human approval and single-image redo loop"
+description: "Orchestrates Phase 3-4 of /bible-class: style selection, master reference generation (hard stop), batch-parallel scene generation with one contact-sheet approval and selective redo"
 tools:
   - Read
   - Write
@@ -210,94 +210,67 @@ On **redo**: re-run Step 5 (no redo-limit on master — master approval is the u
 
 Read `<RD>/lesson-outline.json`. Extract `teaching.scenes[]`. Sort by `index` ascending. Load scene count for cost estimation.
 
-### Step 8: Pre-generation cost estimate
+### Step 8: Pre-generation cost estimate（整批）
 
-Run estimate before the batch:
-```bash
-node skills/image-gen/scripts/generate.js \
-  --run-dir <RD> --label scene-01 \
-  --out /dev/null \
-  --prompt "x" \
-  --estimate-only \
-  --backend <current_backend>
-```
-Multiply by scene count. Present to user: "Estimated: {N} scene images × {cost_per_image} via {backend} ≈ {total}. Proceed?"
-
-If user declines: stop and report. If user proceeds: continue.
-
-### Step 9: Per-scene loop (for each scene in teaching.scenes[])
-
-For each scene with index `I` (zero-padded as `NN = String(I).padStart(2,'0')`):
-
-**9a. Write brief file**
-
-Write `image_brief` content to `<RD>/briefs/scene-{NN}.txt`.
-
-**9b. Generate scene image**
-
-Build argv using `buildGenerateArgs` (include `--reference <RD>/master/master-reference.png`). Track `redo=false` for first attempt.
+对整批 N 个场景做一次成本预估并一次性征求同意：
 
 ```bash
 node skills/image-gen/scripts/generate.js \
-  --run-dir <RD> \
-  --label scene-{NN} \
-  --out <RD>/images/scene-{NN}.png \
-  --prompt-file <RD>/briefs/scene-{NN}.txt \
-  --identity-file <RD>/style.lock.identity.txt \
-  --style-file <RD>/style.lock.style.txt \
-  --reference <RD>/master/master-reference.png
+  --run-dir <RD> --label scene-01 --out /dev/null \
+  --prompt "x" --estimate-only --backend <current_backend>
 ```
 
-On non-zero exit: log stderr, prompt user to skip or retry.
+将单张成本 × 场景数呈现给用户："预计生成 {N} 张场景图 × {单价}（backend={backend}）≈ {合计}。是否继续？"
+用户拒绝则停止并报告；同意则进入 Step 9。
 
-**9c. Run bible_review**
+### Step 9: 并发生成全部场景图（一次性）
 
-Call review-core agent (spawned via `SendMessage`) with:
-- `mode=bible_review`
-- `run_dir=<RD>`
-- `scene_label=scene-{NN}`
-- `image_path=<RD>/images/scene-{NN}.png`
-- `source_file=<RD>/lesson-source.json`
+**9a. 写出所有 brief 文件。** 对每个场景（index `I`，`NN = pad2(I)`），把 `image_brief` 写入 `<RD>/briefs/scene-{NN}.txt`。
 
-Wait for review result. Read `<RD>/bible-reviews/review-{NN}.md`. Parse flags using `parseReviewFlags` from `skills/bible-class/lib/bible_review.js`:
+**9b. 构造 jobs 文件并并发生成。** 写一个 jobs JSON（每项是 `generate.run` 的 args，含 `--reference` 定妆照），调用 `generate_batch.js`：
 
 ```bash
-node -e "
-const { parseReviewFlags } = require('./skills/bible-class/lib/bible_review');
-const text = require('fs').readFileSync('<RD>/bible-reviews/review-{NN}.md', 'utf8');
-const flags = parseReviewFlags(text);
-const criticals = flags.filter(f => f.severity === 'CRITICAL' || f.severity === 'MAJOR');
-console.log(JSON.stringify(criticals));
-"
+# 用 Node 内联生成 jobs.json（label/out/promptFile/identityFile/styleFile/references）
+node -e '
+const fs=require("fs"), path=require("path");
+const RD=process.argv[1];
+const outline=JSON.parse(fs.readFileSync(path.join(RD,"lesson-outline.json"),"utf8"));
+const scenes=outline.teaching.scenes.slice().sort((a,b)=>a.index-b.index);
+const jobs=scenes.map(s=>{const nn=String(s.index).padStart(2,"0");return{
+  runDir:RD, label:`scene-${nn}`, out:path.join(RD,"images",`scene-${nn}.png`),
+  promptFile:path.join(RD,"briefs",`scene-${nn}.txt`),
+  identityFile:path.join(RD,"style.lock.identity.txt"),
+  styleFile:path.join(RD,"style.lock.style.txt"),
+  references:[path.join(RD,"master","master-reference.png")],
+  backend:"codex-cli"
+};});
+fs.writeFileSync(path.join(RD,"briefs","_jobs.json"), JSON.stringify(jobs,null,2));
+console.log("jobs:",jobs.length);
+' <RD>
+
+node skills/image-gen/scripts/generate_batch.js --jobs-file <RD>/briefs/_jobs.json --concurrency 3
 ```
 
-**9d. Present to user for approval**
+并发上限默认 3（codex-cli 后端较慢且有速率限制，3 是稳妥起点；若后端报速率错误，降到 2）。解析其 JSON 输出：对 `ok:false` 的场景记录失败 label。
 
-Show the user:
-- Image path: `<RD>/images/scene-{NN}.png`
-- Scene title and `image_brief`
-- Any CRITICAL/MAJOR review flags
+**9c. 并行 bible_review。** 对每个成功生成的场景，仍按原 Step 9c 调 review-core（`mode=bible_review`）。可一次性把全部场景的 review 请求发出（SendMessage 各自独立），收齐后用 `parseReviewFlags` 汇总每个场景的 CRITICAL/MAJOR 标记。
 
-Prompt:
-> "Scene {NN}: `<image path>`
->
-> Review flags: {flags or 'none'}
->
-> - **approve** — accept this scene and continue
-> - **redo** [optional adjustment note] — regenerate (redo {current}/{REDO_LIMIT} allowed)
-> - **skip** — mark this scene as skipped (can regenerate in a later run)"
+**9d. 一次性 contact-sheet 审批（取代逐张审批）。** 生成一张联系表方便用户一眼看全（可用系统 `montage`/`sips` 或直接列路径）：
 
-**9e. Handle redo**
+```bash
+# 若安装了 ImageMagick：拼一张缩略图联系表
+montage <RD>/images/scene-*.png -tile 3x -geometry 320x240+6+6 -title "Scenes" <RD>/images/_contact-sheet.png 2>/dev/null || echo "（未装 montage，请逐一 open 下列图片）"
+```
 
-If user types **redo**: call `nextRedo(approvals, label)` to get the new redo state. If `limitReached=true`, warn the user: "Redo limit ({REDO_LIMIT}) reached for scene {NN}. This will be the final attempt." Re-run Step 9b with `--redo` flag. Re-run Step 9c. Return to 9d.
+向用户一次性呈现：
+> "全部 {N} 张场景图已生成：`<RD>/images/_contact-sheet.png`（或逐张 `open <RD>/images/scene-NN.png`）。
+> 各场景 bible_review 标记：{逐条列出 scene-NN: flags 或 none}。
+> 请回复需要重做的场景编号 + 调整说明，例如：`redo 03 主角衣服颜色不对; redo 07 背景太暗`。
+> 全部满意请回复 `approve`。"
 
-If redo throws (limit already at max): inform user that the limit is reached and offer to `skip`.
+**9R. 只重做被标记的场景（redo 循环）。** 用户给出重做列表时，对其中每个 scene-NN：调 `nextRedo(approvals, label)` 取新 redo 状态；若 `limitReached` 则警告这是最后一次。把这些（且仅这些）场景重新组成一个 jobs 文件，再次 `generate_batch.js`（并发同上），重做完对这些场景重跑 9c，回到 9d 再次一次性确认。循环至用户 `approve` 或全部到达 redo 上限。
 
-**9f. Record approval**
-
-On **approve**: update in-memory `approvals[label] = { approved: true, redoCount: N }`. Continue to next scene.
-
-On **skip**: update `approvals[label] = { approved: false, redoCount: N, skipped: true }`.
+**9f. 记录审批。** `approve` 后，对每个未被 skip 的场景写 `approvals[label]={approved:true,redoCount:N}`；被用户排除的写 `{approved:false,skipped:true}`。
 
 ### Step 10: Completion summary
 
