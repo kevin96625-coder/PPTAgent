@@ -302,3 +302,19 @@ test('validateLessonOutline: approved=true is valid (lead sets this after approv
   const r = validateLessonOutline(obj);
   assert.strictEqual(r.ok, true);
 });
+
+// ── key_points optional field ────────────────────────────────────────────────
+
+test('scene.key_points 可选：是字符串数组时通过', () => {
+  const outline = validOutline();
+  outline.teaching.scenes[0].key_points = ['要点一', '要点二'];
+  const { errors } = validateLessonOutline(outline);
+  assert.deepStrictEqual(errors, []);
+});
+
+test('scene.key_points 若存在但非字符串数组则报错', () => {
+  const outline = validOutline();
+  outline.teaching.scenes[0].key_points = '不是数组';
+  const { errors } = validateLessonOutline(outline);
+  assert.ok(errors.some((e) => /key_points/.test(e)));
+});

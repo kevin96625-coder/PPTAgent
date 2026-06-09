@@ -114,6 +114,11 @@ function validateLessonOutline(obj) {
         if (typeof scene.index !== 'number') {
           errors.push(`${prefix}.index must be a number`);
         }
+        if ('key_points' in scene) {
+          if (!Array.isArray(scene.key_points) || scene.key_points.some((x) => typeof x !== 'string')) {
+            errors.push(`${prefix}.key_points must be an array of strings when present`);
+          }
+        }
       });
     }
   }
