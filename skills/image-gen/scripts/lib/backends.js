@@ -63,6 +63,37 @@ async function dispatch(opts) {
     const baseUrl = (env.OPENAI_BASE_URL || OPENAI_BASE_URL).replace(/\/+$/, '');
     const model = opts.model || OPENAI_MODEL;
     if (!apiKey) throw new Error('openai-fetch: OPENAI_API_KEY not set');
+
+    if (references.length > 0) {
+      const form = new FormData();
+      form.append('model', model);
+      form.append('prompt', fullPrompt);
+      form.append('n', '1');
+      form.append('size', '1024x1024');
+      form.append('response_format', 'b64_json');
+      for (const ref of references) {
+        if (fs.existsSync(ref)) {
+          const buf = fs.readFileSync(ref);
+          form.append('image', new File([buf], path.basename(ref), { type: 'image/png' }));
+        }
+      }
+      const res = await fetch(`${baseUrl}/images/edits`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+        body: form,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`openai-fetch /images/edits ${res.status}: ${text}`);
+      }
+      const json = await res.json();
+      const b64 = json.data && json.data[0] && json.data[0].b64_json;
+      if (!b64) throw new Error('openai-fetch /images/edits: no b64_json in response');
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      fs.writeFileSync(outPath, Buffer.from(b64, 'base64'));
+      return { imagePath: outPath, meta: { backend, model } };
+    }
+
     const body = {
       model,
       prompt: fullPrompt,
@@ -77,7 +108,7 @@ async function dispatch(opts) {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      throw new Error(`openai-fetch API ${res.status}: ${text}`);
+      throw new Error(`openai-fetch /images/generations ${res.status}: ${text}`);
     }
     const json = await res.json();
     const b64 = json.data && json.data[0] && json.data[0].b64_json;
