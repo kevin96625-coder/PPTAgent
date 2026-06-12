@@ -9,7 +9,7 @@ const { dispatch, defaultRunner } = require('./lib/backends');
 
 function parseArgs(argv) {
   const a = {
-    backend: 'codex-cli', references: [], aspect: '4:3', seed: null,
+    backend: 'openai-fetch', references: [], aspect: '4:3', seed: null,
     redo: false, estimateOnly: false, model: null,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -61,11 +61,26 @@ async function run(args, deps = {}) {
     return { estimate: est, fullPrompt };
   }
 
-  const { imagePath, meta } = await dispatch({
-    backend: args.backend, model: args.model, fullPrompt,
-    references: args.references, aspect: args.aspect, seed: args.seed,
-    outPath: args.out, runner, env,
-  });
+  let result;
+  try {
+    result = await dispatch({
+      backend: args.backend, model: args.model, fullPrompt,
+      references: args.references, aspect: args.aspect, seed: args.seed,
+      outPath: args.out, runner, env,
+    });
+  } catch (primaryErr) {
+    if (args.backend === 'openai-fetch') {
+      console.warn(`openai-fetch failed (${primaryErr.message}), falling back to codex-cli`);
+      result = await dispatch({
+        backend: 'codex-cli', model: args.model, fullPrompt,
+        references: args.references, aspect: args.aspect, seed: args.seed,
+        outPath: args.out, runner, env,
+      });
+    } else {
+      throw primaryErr;
+    }
+  }
+  const { imagePath, meta } = result;
 
   const promptHash = crypto.createHash('sha256').update(fullPrompt).digest('hex').slice(0, 12);
   const existing = manifest.load(args.runDir).entries[args.label];

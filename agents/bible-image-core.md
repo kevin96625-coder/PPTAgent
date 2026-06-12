@@ -243,7 +243,7 @@ const jobs=scenes.map(s=>{const nn=String(s.index).padStart(2,"0");return{
   identityFile:path.join(RD,"style.lock.identity.txt"),
   styleFile:path.join(RD,"style.lock.style.txt"),
   references:[path.join(RD,"master","master-reference.png")],
-  backend:"codex-cli"
+  backend:"openai-fetch"
 };});
 fs.writeFileSync(path.join(RD,"briefs","_jobs.json"), JSON.stringify(jobs,null,2));
 console.log("jobs:",jobs.length);

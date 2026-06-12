@@ -1,5 +1,13 @@
 'use strict';
 
+const { spawn } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.sccens.net/v1';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENAI_MODEL = 'gpt-image-2';
+
 // Codex `exec` argument template — VERIFIED against codex-cli 0.137.0 (2026-06-07,
 // real subscription generation). Working invocation:
 //   printf '%s' "<instruction>" | codex exec --skip-git-repo-check \
@@ -50,6 +58,35 @@ async function dispatch(opts) {
   const { backend, fullPrompt, references = [], outPath, runner } = opts;
   const env = Object.assign({}, opts.env || {});
 
+  if (backend === 'openai-fetch') {
+    const apiKey = env.OPENAI_API_KEY || OPENAI_API_KEY;
+    const baseUrl = (env.OPENAI_BASE_URL || OPENAI_BASE_URL).replace(/\/+$/, '');
+    const model = opts.model || OPENAI_MODEL;
+    if (!apiKey) throw new Error('openai-fetch: OPENAI_API_KEY not set');
+    const body = {
+      model,
+      prompt: fullPrompt,
+      n: 1,
+      size: '1024x1024',
+      response_format: 'b64_json',
+    };
+    const res = await fetch(`${baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`openai-fetch API ${res.status}: ${text}`);
+    }
+    const json = await res.json();
+    const b64 = json.data && json.data[0] && json.data[0].b64_json;
+    if (!b64) throw new Error('openai-fetch: no b64_json in response');
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    fs.writeFileSync(outPath, Buffer.from(b64, 'base64'));
+    return { imagePath: outPath, meta: { backend, model } };
+  }
+
   if (backend === 'codex-cli') {
     // CRITICAL: never let Codex see an API key, or it bills the API instead of the subscription.
     delete env.OPENAI_API_KEY;
@@ -80,8 +117,6 @@ async function dispatch(opts) {
 
   throw new Error(`dispatch: unknown backend "${backend}"`);
 }
-
-const { spawn } = require('node:child_process');
 
 /**
  * Real subprocess runner. @param {{cmd, args, env, input?}} spec

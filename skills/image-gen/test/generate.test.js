@@ -7,10 +7,10 @@ const { parseArgs, run } = require('../scripts/generate');
 
 function tmpRun() { return fs.mkdtempSync(path.join(os.tmpdir(), 'gen-')); }
 
-test('parseArgs defaults backend to codex-cli and splits references', () => {
+test('parseArgs defaults backend to openai-fetch and splits references', () => {
   const a = parseArgs(['--run-dir', '/r', '--label', 'scene-01', '--out', '/o.png',
     '--prompt', 'hi', '--reference', '/a.png,/b.png']);
-  assert.strictEqual(a.backend, 'codex-cli');
+  assert.strictEqual(a.backend, 'openai-fetch');
   assert.deepStrictEqual(a.references, ['/a.png', '/b.png']);
   assert.strictEqual(a.label, 'scene-01');
 });
@@ -31,7 +31,7 @@ test('run (codex-cli) invokes runner, writes manifest entry with zero cost', asy
   const calls = [];
   const out = await run(parseArgs([
     '--run-dir', dir, '--label', 'master', '--out', outPath, '--prompt', 'jesus',
-    '--reference', '/m.png',
+    '--reference', '/m.png', '--backend', 'codex-cli',
   ]), { runner: async (s) => { calls.push(s); fs.writeFileSync(outPath, 'PNG'); return { code: 0, stdout: '', stderr: '' }; } });
 
   assert.strictEqual(out.imagePath, outPath);
@@ -49,7 +49,7 @@ test('run with --redo bumps redo count on existing label', async () => {
   const dir = tmpRun();
   const outPath = path.join(dir, 'o.png');
   const opts = { runner: async () => { fs.writeFileSync(outPath, 'PNG'); return { code: 0 }; } };
-  const base = ['--run-dir', dir, '--label', 'scene-01', '--out', outPath, '--prompt', 'x'];
+  const base = ['--run-dir', dir, '--label', 'scene-01', '--out', outPath, '--prompt', 'x', '--backend', 'codex-cli'];
   await run(parseArgs(base), opts);
   const out2 = await run(parseArgs(base.concat(['--redo'])), opts);
   assert.strictEqual(out2.redoCount, 1);
