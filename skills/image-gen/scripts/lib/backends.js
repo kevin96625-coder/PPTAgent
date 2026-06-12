@@ -3,21 +3,181 @@
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { getCredential } = require('./credentials');
 
-const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.sccens.net/v1';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const OPENAI_MODEL = 'gpt-image-2';
+// ── size mapping (from StoryForge verified matrix) ──────────────────────────
 
-// Codex `exec` argument template — VERIFIED against codex-cli 0.137.0 (2026-06-07,
-// real subscription generation). Working invocation:
-//   printf '%s' "<instruction>" | codex exec --skip-git-repo-check \
-//     --sandbox workspace-write --image <ref> [--image <ref> ...]
-// Notes baked in from the live test:
-//  - The prompt MUST be delivered on STDIN, not as an argv positional: `--image`
-//    is variadic and would otherwise swallow a trailing prompt argument.
-//  - `--sandbox workspace-write` is required so Codex can save the PNG to disk.
-//  - `--skip-git-repo-check` allows running when the RUN_DIR is not a trusted git repo.
-// Keep all Codex specifics here.
+const SIZES = {
+  '1:1': '2048x2048',
+  '16:9': '2048x1152',
+  '9:16': '1152x2048',
+};
+
+const DEFAULT_MODEL = 'gpt-image-2';
+
+// ── URL normalization (from StoryForge verified pattern) ────────────────────
+// Input may be https://host or https://host/v1 — strip /v1 suffix first,
+// then always append /v1/images/... to avoid /v1/v1/... duplication.
+
+function normalizeBaseUrl(url) {
+  let base = String(url || '').replace(/\/+$/, '');
+  if (base.endsWith('/v1')) base = base.slice(0, -3);
+  return base.replace(/\/+$/, '');
+}
+
+function resolveBase(env) {
+  return normalizeBaseUrl(env.OPENAI_BASE_URL || getCredential('OPENAI_BASE_URL') || 'https://api.sccens.net');
+}
+
+function resolveKey(env) {
+  return env.OPENAI_API_KEY || getCredential('OPENAI_API_KEY') || '';
+}
+
+// ── response parser (compatible with multiple shapes) ───────────────────────
+
+function extractB64(payload) {
+  const data = payload.data;
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      if (item && typeof item === 'object') {
+        if (typeof item.b64_json === 'string' && item.b64_json.length > 100) return item.b64_json;
+      }
+    }
+    for (const item of data) {
+      if (item && typeof item === 'object') {
+        for (const field of ['url', 'image_url']) {
+          const val = item[field];
+          if (typeof val === 'string' && val.startsWith('data:image/') && val.includes(';base64,')) {
+            const idx = val.indexOf(';base64,');
+            return val.slice(idx + 8);
+          }
+        }
+      }
+    }
+  }
+  const images = payload.images;
+  if (Array.isArray(images)) {
+    for (const item of images) {
+      if (typeof item === 'string' && item.length > 100) return item;
+      if (item && typeof item === 'object' && typeof item.b64_json === 'string') return item.b64_json;
+    }
+  }
+  const output = payload.output;
+  if (output && typeof output === 'object' && Array.isArray(output.b64_json)) {
+    const first = output.b64_json[0];
+    if (typeof first === 'string') return first;
+    if (first && typeof first.bytesBase64 === 'string') return first.bytesBase64;
+  }
+  return null;
+}
+
+function extractUrl(payload) {
+  const data = payload.data;
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      if (item && typeof item === 'object') {
+        for (const field of ['url', 'image_url']) {
+          const val = item[field];
+          if (typeof val === 'string' && val.startsWith('http')) return val;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function saveB64(b64, outPath) {
+  const buf = Buffer.from(b64, 'base64');
+  if (buf.length < 8) throw new Error('openai-fetch: decoded image too small');
+  const magic = buf.slice(0, 8).toString('hex');
+  if (!magic.startsWith('89504e47') && !magic.startsWith('ffd8ff') && !magic.startsWith('52494646')) {
+    throw new Error('openai-fetch: decoded bytes do not look like a valid image (magic mismatch)');
+  }
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, buf);
+}
+
+// ── openai-fetch backend ────────────────────────────────────────────────────
+
+async function dispatchOpenaiFetch(opts, env) {
+  const apiKey = resolveKey(env);
+  const base = resolveBase(env);
+  const model = opts.model || DEFAULT_MODEL;
+  if (!apiKey) throw new Error('openai-fetch: API key not configured (set OPENAI_API_KEY in env or .env)');
+  const size = SIZES[opts.aspect] || SIZES['1:1'];
+  const references = opts.references || [];
+
+  if (references.length > 0) {
+    const form = new FormData();
+    form.append('model', model);
+    form.append('prompt', opts.fullPrompt);
+    form.append('n', '1');
+    form.append('size', size);
+    for (const ref of references) {
+      if (fs.existsSync(ref)) {
+        const buf = fs.readFileSync(ref);
+        form.append('image', new File([buf], path.basename(ref), { type: 'image/png' }));
+      }
+    }
+    const res = await fetch(`${base}/v1/images/edits`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+      body: form,
+    });
+    if (!res.ok) {
+      const status = res.status;
+      const text = await res.text().catch(() => '');
+      throw new Error(`openai-fetch /images/edits ${status}: ${text.slice(0, 200)}`);
+    }
+    const json = await res.json();
+    const b64 = extractB64(json);
+    if (b64) {
+      saveB64(b64, opts.outPath);
+      return { imagePath: opts.outPath, meta: { backend: 'openai-fetch', model } };
+    }
+    const url = extractUrl(json);
+    if (url) {
+      const imgRes = await fetch(url);
+      if (!imgRes.ok) throw new Error(`openai-fetch: failed to download image URL (${imgRes.status})`);
+      const buf = Buffer.from(await imgRes.arrayBuffer());
+      fs.mkdirSync(path.dirname(opts.outPath), { recursive: true });
+      fs.writeFileSync(opts.outPath, buf);
+      return { imagePath: opts.outPath, meta: { backend: 'openai-fetch', model } };
+    }
+    throw new Error('openai-fetch /images/edits: no image data in response');
+  }
+
+  const body = { model, prompt: opts.fullPrompt, n: 1, size, response_format: 'b64_json' };
+  const res = await fetch(`${base}/v1/images/generations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const status = res.status;
+    const text = await res.text().catch(() => '');
+    throw new Error(`openai-fetch /images/generations ${status}: ${text.slice(0, 200)}`);
+  }
+  const json = await res.json();
+  const b64 = extractB64(json);
+  if (b64) {
+    saveB64(b64, opts.outPath);
+    return { imagePath: opts.outPath, meta: { backend: 'openai-fetch', model } };
+  }
+  const url = extractUrl(json);
+  if (url) {
+    const imgRes = await fetch(url);
+    if (!imgRes.ok) throw new Error(`openai-fetch: failed to download image URL (${imgRes.status})`);
+    const buf = Buffer.from(await imgRes.arrayBuffer());
+    fs.mkdirSync(path.dirname(opts.outPath), { recursive: true });
+    fs.writeFileSync(opts.outPath, buf);
+    return { imagePath: opts.outPath, meta: { backend: 'openai-fetch', model } };
+  }
+  throw new Error('openai-fetch /images/generations: no image data in response');
+}
+
+// ── codex-cli backend ────────────────────────────────────────────────────────
+
 function buildCodexArgs({ references }) {
   const args = ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write'];
   for (const ref of references || []) {
@@ -26,7 +186,6 @@ function buildCodexArgs({ references }) {
   return args;
 }
 
-// The instruction is delivered to Codex on STDIN (see buildCodexArgs note).
 function buildCodexInstruction({ fullPrompt, references, outPath }) {
   const refNote = references && references.length
     ? 'The attached reference image(s) define the main character — keep that character '
@@ -54,72 +213,17 @@ function buildOpenaiArgs({ fullPrompt, references, outPath, model }) {
   return args;
 }
 
+// ── dispatch ─────────────────────────────────────────────────────────────────
+
 async function dispatch(opts) {
   const { backend, fullPrompt, references = [], outPath, runner } = opts;
   const env = Object.assign({}, opts.env || {});
 
   if (backend === 'openai-fetch') {
-    const apiKey = env.OPENAI_API_KEY || OPENAI_API_KEY;
-    const baseUrl = (env.OPENAI_BASE_URL || OPENAI_BASE_URL).replace(/\/+$/, '');
-    const model = opts.model || OPENAI_MODEL;
-    if (!apiKey) throw new Error('openai-fetch: OPENAI_API_KEY not set');
-
-    if (references.length > 0) {
-      const form = new FormData();
-      form.append('model', model);
-      form.append('prompt', fullPrompt);
-      form.append('n', '1');
-      form.append('size', '1024x1024');
-      form.append('response_format', 'b64_json');
-      for (const ref of references) {
-        if (fs.existsSync(ref)) {
-          const buf = fs.readFileSync(ref);
-          form.append('image', new File([buf], path.basename(ref), { type: 'image/png' }));
-        }
-      }
-      const res = await fetch(`${baseUrl}/images/edits`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}` },
-        body: form,
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`openai-fetch /images/edits ${res.status}: ${text}`);
-      }
-      const json = await res.json();
-      const b64 = json.data && json.data[0] && json.data[0].b64_json;
-      if (!b64) throw new Error('openai-fetch /images/edits: no b64_json in response');
-      fs.mkdirSync(path.dirname(outPath), { recursive: true });
-      fs.writeFileSync(outPath, Buffer.from(b64, 'base64'));
-      return { imagePath: outPath, meta: { backend, model } };
-    }
-
-    const body = {
-      model,
-      prompt: fullPrompt,
-      n: 1,
-      size: '1024x1024',
-      response_format: 'b64_json',
-    };
-    const res = await fetch(`${baseUrl}/images/generations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`openai-fetch /images/generations ${res.status}: ${text}`);
-    }
-    const json = await res.json();
-    const b64 = json.data && json.data[0] && json.data[0].b64_json;
-    if (!b64) throw new Error('openai-fetch: no b64_json in response');
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    fs.writeFileSync(outPath, Buffer.from(b64, 'base64'));
-    return { imagePath: outPath, meta: { backend, model } };
+    return dispatchOpenaiFetch({ ...opts, fullPrompt, references, outPath }, env);
   }
 
   if (backend === 'codex-cli') {
-    // CRITICAL: never let Codex see an API key, or it bills the API instead of the subscription.
     delete env.OPENAI_API_KEY;
     const args = buildCodexArgs({ references });
     const input = buildCodexInstruction({ fullPrompt, references, outPath });
@@ -149,10 +253,8 @@ async function dispatch(opts) {
   throw new Error(`dispatch: unknown backend "${backend}"`);
 }
 
-/**
- * Real subprocess runner. @param {{cmd, args, env, input?}} spec
- * @returns {Promise<{code:number, stdout:string, stderr:string}>}
- */
+// ── default subprocess runner ────────────────────────────────────────────────
+
 function defaultRunner(spec) {
   return new Promise((resolve, reject) => {
     const child = spawn(spec.cmd, spec.args, { env: spec.env });
@@ -169,4 +271,4 @@ function defaultRunner(spec) {
   });
 }
 
-module.exports = { dispatch, defaultRunner, buildCodexArgs, buildCodexInstruction, buildGeminiArgs, buildOpenaiArgs };
+module.exports = { dispatch, defaultRunner, buildCodexArgs, buildCodexInstruction, buildGeminiArgs, buildOpenaiArgs, normalizeBaseUrl, extractB64, SIZES };

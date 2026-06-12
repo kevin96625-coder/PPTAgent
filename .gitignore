@@ -4,3 +4,8 @@
 .claude/
 llmdoc/
 openspec/
+.env
+.env.*
+!.env.example
+*.key
+*.secret
