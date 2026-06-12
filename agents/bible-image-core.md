@@ -170,6 +170,7 @@ Write the master brief to `<RD>/briefs/master.txt`:
 Master character reference sheet for {character_name}.
 Full-body front view and 3/4 side view on a clean neutral background.
 No scene context — pure character reference only.
+Character must have a calm, NEUTRAL facial expression — no smiling, frowning, or any strong emotional expression. Per-scene emotions will be specified in each scene's image_brief.
 Use the identity_block above for all physical details.
 This image will be used as a reference for all subsequent scene images to ensure visual consistency.
 ```

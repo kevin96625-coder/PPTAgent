@@ -54,7 +54,7 @@ teacher approval before any images are generated.
         "key_points": ["string (2-3条，每条幼儿可懂的动宾短句，用作右侧要点卡，如：天父刮大风 / 海水成两道墙)"],
         "narration": "string (3-5岁口语旁白)",
         "interaction": "string (互动提问)",
-        "image_brief": "string (画面描述，供生图)"
+        "image_brief": "string (画面描述，供生图。定妆照主角为中性neutral表情，此处需根据场面给主角补上轻量情绪词，如微笑、严肃、心疼、惊讶、困惑等，禁止夸张情绪。例如：摩西严肃地高举木杖伸向海面)"
       }
     ]
   },
