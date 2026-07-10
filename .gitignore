@@ -2,6 +2,7 @@
 .content-skills/
 .serena/
 .claude/
+.worktrees/
 llmdoc/
 openspec/
 .env
