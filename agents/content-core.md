@@ -6,6 +6,7 @@ tools:
   - Write
   - Skill
   - SendMessage
+  - WebSearch
 memory: project
 model: opus
 color: blue
@@ -78,11 +79,71 @@ Handle content authoring: structured outline creation using Pyramid Principle an
      - Read `${run_dir}/lesson-source.json`. This is the SOLE content source — all outline
        content must derive from it. Do NOT introduce theological positions, extra Bible
        passages, or doctrinal commentary beyond what is stated in lesson-source.json.
+     - **Scripture-grounded character profile (受控例外).** First, identify WHO the main
+       biblical character of this lesson is, by reading `lesson-source.json`'s `raw_text`,
+       `teaching_content`, and `core_points` (e.g. is it David? Moses? Jesus? Peter? Jonah?).
+       Do NOT assume — the character varies by story (a common error is defaulting to Moses
+       for every lesson). Then use WebSearch to look up, for that character at the event in
+       `scripture_ref`: (a) their age, and (b) their physical appearance. This is the ONLY
+       case where you may bring in information outside lesson-source.json, and ONLY for the
+       purpose of building the character profile. Build a complete `character_profile` object
+       with all 6 fields filled:
+       - `character_name`: the identified protagonist (e.g. 大卫/摩西/耶稣/彼得).
+       - `age_appearance`: their age at this event, with scripture basis (e.g.
+         "中年（大卫写多数诗篇时为成年君王）" / "约30岁（路加福音3:23）" /
+         "60-80岁老年（使徒行传7:23,30）"). For `character_age` top-level field, copy this value.
+       - `ethnicity`: based on biblical/historical context (e.g. "公元前10世纪犹太/以色列地区"
+         for David; "1世纪犹太/近东地区" for Jesus).
+       - `hair_description`: reasonable inference from the era/region (e.g. "棕色或黑色头发，
+         留胡须" for a 1st-century Near-Eastern man). The Bible rarely describes hair in
+         detail, so infer from historical setting, do NOT fabricate scripture citations.
+       - `clothing`: era-appropriate (e.g. "亚麻及踝长袍、腰带、皮凉鞋" — standard ancient
+         Near-Eastern attire; David as king may wear "细麻布以弗得").
+       - `palette`: warm, child-friendly colors suited to the character (e.g. for David:
+         "温暖棕、橄榄绿、米白、深蓝").
+       If the protagonist cannot be identified confidently, set `character_profile` to null
+       and `character_age` to empty string — do NOT guess. The teacher will review this in
+       the Phase 2 hard stop and can correct it via revise.
+     - **Supporting characters (重要配角识别).** After identifying the main protagonist,
+       scan the scene narrative beats you are about to write for IMPORTANT supporting
+       characters who should also get a master reference for cross-scene consistency.
+       A character qualifies as an important supporting character ONLY if ALL of:
+       (a) they appear in ≥2 scenes with specific actions or dialogue (not just background),
+       AND (b) they are named or semi-named (e.g. 盲人/the blind man, 撒该/Zacchaeus,
+       拉撒路/Lazarus, the woman at the well) — NOT anonymous groups (門徒/disciples as a
+       group, 群眾/crowd, 小朋友/children are anonymous groups and must NOT get a profile;
+       they stay in image_brief as free text). Typical examples: John 9 → blind man;
+       Luke 19 → Zacchaeus; John 11 → Lazarus. Most single-protagonist stories (e.g.
+       Moses parting the Red Sea, David writing a psalm) have NO supporting character —
+       in that case produce an empty `characters` map with only the protagonist.
+       For each qualifying supporting character, build the same 6-field profile
+       (WebSearch for age/appearance using the same controlled-exception rule as the
+       protagonist). Assign each a stable lowercase `role_key` (e.g. `blindman`,
+       `zacchaeus`, `lazarus`) and reuse it consistently in every scene's `characters`
+       array. The protagonist's `role_key` is always the first entry (e.g. `jesus`,
+       `moses`, `david`).
      - Generate `lesson-outline.json` with the following exact structure:
        - `title`: lesson title from lesson-source.json.
        - `approved`: always set to `false` (the lead orchestrator sets it to `true` after
          user approval).
        - `scripture_ref`: from lesson-source.json.
+       - `character_age`: the scripture-grounded age string from the lookup step above
+         (may be empty string if age could not be determined). This is a redundant snapshot
+         of `character_profile.age_appearance` for backward compatibility.
+       - `character_profile`: the complete character profile object from the lookup step
+         above (may be null if protagonist could not be identified). Must have all 6 keys:
+         `character_name`, `age_appearance`, `ethnicity`, `hair_description`, `clothing`,
+         `palette`. This is a snapshot of the protagonist entry in `characters` for backward
+         compatibility.
+       - `characters`: a map of role_key → profile object for ALL characters that need a
+         master reference (protagonist + important supporting characters). Each value has
+         7 keys: `character_name`, `role` ("main" for protagonist, "supporting" for others),
+         `age_appearance`, `ethnicity`, `hair_description`, `clothing`, `palette`. The
+         protagonist MUST be included with role="main". If no supporting characters, the
+         map contains only the protagonist. May be null only if protagonist is unknown.
+       - `characters_order`: an array of role_keys in display/processing order, with the
+         protagonist first (e.g. ["jesus","blindman"]). Drives master-reference generation
+         order.
        - `teaching.duration_min`: 15.
        - `teaching.scenes`: Array of scene objects derived from `core_points` and
          `raw_text`, with the scene count driven by the Bible story's natural
@@ -99,6 +160,13 @@ Handle content authoring: structured outline creation using Pyramid Principle an
          - `interaction`: one interactive question or action prompt for children.
          - `image_brief`: a vivid illustration description for image generation (subject,
            setting, mood, key visual elements; max 80 characters).
+         - `characters`: array of role_keys that appear in this scene (drawn from the
+           top-level `characters` map). Only list characters whose master reference should
+           be passed when generating this scene's image (e.g. ["jesus","blindman"] for the
+           mud-on-eyes scene; ["blindman"] for the blind-man-alone-at-pool scene; ["jesus"]
+           for a Jesus-only scene). If the scene has no profiled character (pure crowd
+           scene), use an empty array [] — the protagonist's reference is still passed as a
+           fallback. Anonymous groups (門徒, 群眾, 小朋友) are NEVER listed here.
        - `craft.duration_min`: 15.
        - `craft.title`: short Chinese craft activity name.
        - `craft.materials`: list of simple craft materials (paper, scissors, glue, etc.).
@@ -128,6 +196,19 @@ Handle content authoring: structured outline creation using Pyramid Principle an
        - Do NOT regenerate scenes that were not mentioned in the feedback.
        - Do NOT introduce content not present in `lesson-source.json`.
        - Re-index `teaching.scenes` sequentially after any add/remove operations.
+       - **Character age:** if the feedback mentions the character's age being wrong,
+         re-run the WebSearch scripture lookup (same controlled-exception rule as
+         `lesson_outline`) and update the top-level `character_age` field. Otherwise
+         preserve the existing `character_age` unchanged.
+       - **Character profile:** if the feedback mentions the protagonist's identity or
+         appearance being wrong (e.g. "主角是大卫不是摩西"), re-identify the protagonist
+         and rebuild the `character_profile` object via the same lookup. Otherwise
+         preserve the existing `character_profile` unchanged.
+       - **Characters & supporting cast:** if the feedback mentions a supporting character
+         (add/remove/modify, e.g. "盲人也要定妆照" or "门徒不该当配角"), re-run the
+         supporting-character identification step and update `characters`,
+         `characters_order`, and each scene's `characters` array accordingly. Otherwise
+         preserve them unchanged.
      - Re-validate with `validateLessonOutline` before writing.
      - Write updated `${run_dir}/lesson-outline.json`.
      - Regenerate `${run_dir}/lesson-outline.md` and `${run_dir}/craft.md` from the

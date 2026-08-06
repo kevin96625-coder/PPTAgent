@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bible Class - Execute</title>
+<link rel="stylesheet" href="/app.css">
+<style>
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+.tag.idle { background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-muted); }
+.tag.running { background: var(--cyan-light); border: 1px solid rgba(8, 145, 178, 0.3); color: var(--cyan); }
+
+.options-form {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+.options-form h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.phase-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.phase-row {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.phase-row:hover {
+  border-color: var(--border-active);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.phase-row.active {
+  border-color: var(--cyan);
+  background: var(--cyan-light);
+  box-shadow: var(--shadow-md);
+}
+.phase-row.done {
+  border-color: rgba(21, 128, 97, 0.25);
+}
+.phase-row.error {
+  border-color: rgba(185, 28, 28, 0.35);
+}
+
+.phase-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+.phase-row.done .phase-num {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-light);
+}
+.phase-row.active .phase-num {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: var(--bg-card);
+}
+.phase-row.error .phase-num {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-light);
+}
+
+.phase-info {
+  flex: 1;
+  min-width: 0;
+}
+.phase-info h3 {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.phase-info .desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.phase-info .llm-tag {
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: rgba(192, 132, 252, 0.08);
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  color: #a855f7;
+  text-transform: uppercase;
+}
+.phase-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.log-panel {
+  margin-top: 1.5rem;
+}
+.log-toggle {
+  background: transparent;
+  border: none;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+.log-toggle:hover {
+  color: var(--cyan);
+  background: var(--bg-hover);
+}
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 2000;
+  padding: 2rem;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: var(--radius-md);
+  max-width: 860px; width: 100%;
+  max-height: 85vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0,0,0,.25);
+}
+.modal header {
+  padding: 1.1rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  font-weight: 700; font-size: 1rem; color: var(--text-main);
+}
+.modal .modal-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1; }
+.modal footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex; gap: .75rem; align-items: flex-start; flex-wrap: wrap;
+}
+.modal footer textarea {
+  flex: 1; min-width: 240px; min-height: 56px;
+  font-size: .82rem; padding: .5rem .65rem;
+  border: 1px solid var(--border-active); border-radius: var(--radius-sm);
+  font-family: inherit; resize: vertical;
+}
+.ol-scene {
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  padding: .75rem 1rem; margin-bottom: .6rem;
+}
+.ol-scene h4 { font-size: .88rem; margin-bottom: .3rem; color: var(--text-main); }
+.ol-scene p { font-size: .8rem; color: var(--text-muted); margin: .15rem 0; line-height: 1.45; }
+.ol-scene p b { color: var(--text-main); font-weight: 600; }
+.ol-meta { font-size: .85rem; color: var(--text-muted); margin-bottom: .9rem; }
+.ol-h { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--cyan); margin: 1rem 0 .5rem; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-inner">
+    <a href="/">Dashboard</a>
+    <span class="sep">/</span>
+    <a id="backLink" href="#">Run Detail</a>
+    <span class="sep">/</span>
+    <h1 id="topTitle" style="flex:none;margin-right:1rem">Execute</h1>
+    <span class="tag idle" id="statusTag">Idle</span>
+    <span style="flex:1"></span>
+    <button id="execAllBtn" class="btn btn-accent btn-sm" onclick="executeAll()" aria-label="Execute all remaining phases">⚡ Execute All Remaining</button>
+  </div>
+</div>
+<div class="main">
+  <div class="options-form">
+    <h3>Run Options</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="optPreset">Style Preset（作用于「风格锁定」阶段）</label>
+        <select id="optPreset">
+          <option value="flat-cartoon">Flat Cartoon (扁平卡通)</option>
+          <option value="watercolor-storybook">Watercolor (水彩绘本)</option>
+          <option value="disney-3d">Disney 3D (皮克斯3D)</option>
+          <option value="warm-handdrawn">Warm Handdrawn (温暖手绘)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="optConcurrency">Concurrency（作用于「批量生成场景图」阶段）</label>
+        <select id="optConcurrency">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label for="optCharDesc">Character Description JSON (optional，作用于「风格锁定」阶段)</label>
+        <textarea id="optCharDesc" placeholder='留空则自动读取大纲里查经得出的 characters（主角+重要配角，每人姓名+年龄+外观）；填写则完全覆盖为单角色，例如 {"character_name":"大卫","age_appearance":"中年","ethnicity":"公元前10世纪犹太/以色列地区","hair_description":"棕色或黑色头发，留胡须","clothing":"亚麻及踝长袍、腰带、皮凉鞋","palette":"温暖棕、橄榄绿、米白、深蓝"}'></textarea>
+        <small style="color:#888;display:block;margin-top:2px">💡 主角及重要配角（如盲人、撒该等跨多场出现的具名角色）已在大纲阶段联网查经识别（见 lesson-outline.json 的 characters 映射）。留空此框即可自动套用，系统会为每个角色生成定妆照并在场景图里按出场精确引用。如需增减配角请回到大纲修改。</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-list" id="phaseList"></div>
+
+  <div class="log-panel">
+    <button class="log-toggle" onclick="toggleLog()" aria-label="Toggle execution log">
+      <span id="logArrow">▶</span> Execution Log
+    </button>
+    <div class="log-box" id="logBox"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="outlineModal">
+  <div class="modal">
+    <header>📋 大纲确认 — 请审阅生成的教案大纲</header>
+    <div class="modal-body" id="outlineModalBody"></div>
+    <footer>
+      <textarea id="outlineFeedback" placeholder="不满意？写下修改意见（如：第3幕太抽象，金句换一个更短的），点「重新生成」"></textarea>
+      <button class="btn btn-danger" onclick="regenerateOutline()">↻ 重新生成</button>
+      <button class="btn btn-accent" onclick="approveOutline()">✓ 确认大纲，继续</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+const runId=location.pathname.split('/')[2];
+let phaseData=[];let activePhase=null;let logOpen=false;let runModel=null;
+const MODEL_LABELS={gpt:'GPT-5.5',claude:'Claude Opus 4.8',gemini:'Gemini Pro'};
+
+async function load(){
+  const [runInfo,phases]=await Promise.all([
+    fetch(`/api/runs/${runId}`).then(r=>r.json()),
+    fetch(`/api/runs/${runId}/phases`).then(r=>r.json()),
+  ]);
+  runModel=runInfo.model||null;
+  document.getElementById('topTitle').textContent=runInfo.title||runId;
+  document.getElementById('backLink').href=`/run/${runId}`;
+  phaseData=phases.phases||[];
+  render();
+  // 断点续做: if a phase is running on the server, re-attach to its stream.
+  if(phases.runningPhase&&!activePhase){
+    appendLog('info',`检测到阶段 "${phases.runningPhase}" 正在服务端运行，自动重连日志流...`);
+    attachToRunning(phases.runningPhase);
+  }
+}
+
+function attachToRunning(key){
+  activePhase=key;
+  const tag=document.getElementById('statusTag');
+  tag.textContent='Running';tag.className='tag running';
+  render();openLog();
+  const es=new EventSource(`/api/runs/${runId}/execute/${encodeURIComponent(key)}/stream`);
+  es.addEventListener('log',(e)=>{const d=JSON.parse(e.data);appendLog(d.type,d.line,d.ts);});
+  es.addEventListener('status',(e)=>{
+    const d=JSON.parse(e.data);
+    if(d.status==='done'||d.status==='error'){
+      appendLog(d.status==='done'?'info':'err',d.status==='done'?`Phase "${key}" completed`:`Error: ${d.error}`);
+      activePhase=null;tag.textContent='Idle';tag.className='tag idle';
+      es.close();load();
+    }
+  });
+  es.onerror=()=>{es.close();activePhase=null;tag.textContent='Idle';tag.className='tag idle';render();};
+}
+
+function render(){
+  document.getElementById('phaseList').innerHTML=phaseData.map((p,i)=>{
+    const cls=activePhase===p.key?'active':p.lastStatus==='error'?'error':p.completed?'done':'';
+    let statusBadge='';
+    if(activePhase!==p.key){
+      if(p.completed)statusBadge='<span class="llm-tag" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.3);color:var(--green)">✓ 已完成</span>';
+      else if(p.lastStatus==='error')statusBadge=`<span class="llm-tag" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);color:var(--red)" title="${esc(p.lastError||'')}">✗ 上次失败</span>`;
+      else if(p.lastStatus==='interrupted')statusBadge='<span class="llm-tag" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35);color:#b45309">⏸ 已中断，可重跑</span>';
+    }
+    return`<div class="phase-row ${cls}" id="row-${p.key}">
+      <div class="phase-num">${i+1}</div>
+      <div class="phase-info">
+        <h3>${esc(p.label)}${p.needsLLM?`<span class="llm-tag">${esc(MODEL_LABELS[runModel]||'Claude Opus 4.8 (默认)')}</span>`:''}${statusBadge}</h3>
+        <div class="desc">${esc(p.description)}</div>
+      </div>
+      <div class="phase-actions">
+        ${activePhase===p.key?'<div class="spinner"></div><button class="btn btn-sm btn-danger" onclick="cancelPhase()">■ Stop</button>':''}
+        <button class="btn btn-sm btn-primary" onclick="execPhase('${p.key}')" ${activePhase?'disabled':''}>
+          ${p.completed?'Re-run':'Execute'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let isExecutingAll = false;
+let outlineGate = null;
+
+// ---- Outline approval modal ----
+let outlineApproveResolve=null;
+let pendingFeedback='';
+
+async function openOutlineModal(){
+  const o=await fetch(`/api/runs/${runId}/outline`).then(r=>r.json());
+  if(o.error){appendLog('err','无法读取大纲: '+o.error);return Promise.resolve(false);}
+  const body=document.getElementById('outlineModalBody');
+  const scenes=(o.teaching&&o.teaching.scenes)||[];
+  body.innerHTML=`
+    <div class="ol-meta"><b style="font-size:1.05rem;color:var(--text-main)">${esc(o.title)}</b> &nbsp;·&nbsp; ${esc(o.scripture_ref)} &nbsp;·&nbsp; ${scenes.length} 个场景</div>
+    ${o.memory_verse?`<div class="ol-scene" style="background:var(--cyan-light)"><p><b>金句：</b>${esc(o.memory_verse.text)}（${esc(o.memory_verse.ref||'')}）</p></div>`:''}
+    <div class="ol-h">教学场景（每幕一页 PPT）</div>
+    ${scenes.map(s=>`<div class="ol-scene">
+      <h4>第 ${s.index} 幕 · ${esc(s.title)}</h4>
+      <p><b>要点：</b>${esc(s.key_message)}</p>
+      <p><b>旁白：</b>${esc(s.narration)}</p>
+      <p><b>互动：</b>${esc(s.interaction)}</p>
+      <p><b>配图提示词：</b>${esc(s.image_brief)}</p>
+    </div>`).join('')}
+    ${o.craft?`<div class="ol-h">手工活动</div><div class="ol-scene">
+      <h4>${esc(o.craft.title)}（${o.craft.duration_min||15} 分钟）</h4>
+      <p><b>材料：</b>${esc((o.craft.materials||[]).join('、'))}</p>
+      ${(o.craft.steps||[]).map((st,i)=>`<p>${i+1}. ${esc(st)}</p>`).join('')}
+      ${o.craft.relation_to_story?`<p><b>与故事的联系：</b>${esc(o.craft.relation_to_story)}</p>`:''}
+    </div>`:''}`;
+  document.getElementById('outlineFeedback').value='';
+  document.getElementById('outlineModal').classList.add('show');
+  // Chain resolvers so an outer waiter (Execute All) survives regenerate cycles.
+  return new Promise(res=>{
+    const prev=outlineApproveResolve;
+    outlineApproveResolve=(v)=>{res(v);if(prev)prev(v);};
+  });
+}
+
+async function approveOutline(){
+  const r=await fetch(`/api/runs/${runId}/approve/outline`,{method:'POST'}).then(r=>r.json());
+  document.getElementById('outlineModal').classList.remove('show');
+  if(r.ok){appendLog('info','大纲已确认 ✓');}
+  else appendLog('err',r.error||'Approve failed');
+  if(outlineApproveResolve){outlineApproveResolve(true);outlineApproveResolve=null;}
+  load();
+}
+
+async function regenerateOutline(){
+  const fb=document.getElementById('outlineFeedback').value.trim();
+  document.getElementById('outlineModal').classList.remove('show');
+  pendingFeedback=fb;
+  appendLog('info','按修改意见重新生成大纲...');
+  try{
+    await execPhase('generate-outline');
+    // execPhase's done handler reopens the modal automatically.
+  }catch(e){
+    appendLog('err','重新生成失败: '+e);
+    if(outlineApproveResolve){outlineApproveResolve(false);outlineApproveResolve=null;}
+  }
+}
+
+async function cancelPhase() {
+  if (!activePhase) return;
+  appendLog('info', `正在中止阶段 "${activePhase}" ...`);
+  try {
+    const r = await fetch(`/api/runs/${runId}/cancel`, { method: 'POST' }).then(res => res.json());
+    if (!r.ok) appendLog('err', r.error || 'Cancel failed');
+    // The phase's error status arrives via SSE and resets the UI.
+  } catch (e) { appendLog('err', 'Cancel failed: ' + e.message); }
+}
+
+async function executeAll() {
+  if (isExecutingAll) {
+    isExecutingAll = false;
+    document.getElementById('execAllBtn').innerHTML = '<div class="spinner"></div> Stopping...';
+    cancelPhase();
+    return;
+  }
+  isExecutingAll = true;
+  const btn = document.getElementById('execAllBtn');
+  btn.innerHTML = '<div class="spinner"></div> Stop after current phase';
+  
+  const pending = phaseData.filter(p => !p.completed);
+  for (const phase of pending) {
+    if (!isExecutingAll) break;
+    try {
+      await execPhase(phase.key);
+      if (phase.key === 'generate-outline' && outlineGate) {
+        appendLog('info', '等待大纲确认后继续...');
+        const ok = await outlineGate;
+        outlineGate = null;
+        if (!ok) { appendLog('err', '大纲未确认，停止后续阶段'); break; }
+      }
+    } catch (e) {
+      appendLog('err', 'Execute All stopped due to error');
+      break;
+    }
+  }
+  isExecutingAll = false;
+  btn.textContent = '⚡ Execute All Remaining';
+}
+
+function execPhase(key){
+  return new Promise(async (resolve, reject) => {
+    if(activePhase) { reject('Already running'); return; }
+    activePhase=key;
+    const tag=document.getElementById('statusTag');
+    tag.textContent='Running';tag.className='tag running';
+    render();
+    openLog();
+
+    const opts={};
+    opts.preset=document.getElementById('optPreset').value;
+    opts.concurrency=parseInt(document.getElementById('optConcurrency').value,10);
+    if(key==='generate-outline'&&pendingFeedback){opts.feedback=pendingFeedback;pendingFeedback='';}
+    const charDesc=document.getElementById('optCharDesc').value.trim();
+    if(charDesc){
+      try{opts.characterDesc=JSON.parse(charDesc);}
+      catch(e){
+        appendLog('err',`Character Description JSON 解析失败，已忽略该字段: ${e.message}`);
+      }
+    }
+
+    let es = null;
+    let retryCount = 0;
+    
+    function connect() {
+      if (es) es.close();
+      es=new EventSource(`/api/runs/${runId}/execute/${encodeURIComponent(key)}/stream`);
+      es.addEventListener('log',(e)=>{
+        const d=JSON.parse(e.data);
+        appendLog(d.type,d.line,d.ts);
+      });
+      es.addEventListener('status',(e)=>{
+        const d=JSON.parse(e.data);
+        if(d.status==='done'){
+          appendLog('info',`Phase "${key}" completed successfully`);
+          if(d.result&&d.result.files)appendLog('info',`产物: ${d.result.files.join(', ')} — 可在 Run Detail 页查看成果`);
+          activePhase=null;
+          tag.textContent='Idle';tag.className='tag idle';
+          es.close();
+          load();
+          if(key==='generate-outline')outlineGate=openOutlineModal();
+          resolve();
+        }else if(d.status==='error'){
+          appendLog('err',`Error: ${d.error}`);
+          activePhase=null;
+          tag.textContent='Error';tag.className='tag idle';
+          const row=document.getElementById('row-'+key);
+          if(row)row.className='phase-row error';
+          es.close();
+          render();
+          reject(d.error);
+        }else if(d.status==='running'){
+          if(retryCount===0) appendLog('info',`Phase "${key}" started...`);
+        }
+      });
+      es.onerror=()=>{
+        es.close();
+        if (activePhase === key && retryCount < 5) {
+          retryCount++;
+          appendLog('err', `Connection lost. Reconnecting (${retryCount}/5)...`);
+          setTimeout(connect, 2000);
+        } else if (activePhase === key) {
+          appendLog('err', 'Connection failed permanently.');
+          activePhase=null; tag.textContent='Error'; tag.className='tag idle';
+          render();
+          reject('Connection failed');
+        }
+      };
+    }
+
+    const res=await fetch(`/api/runs/${runId}/execute/${encodeURIComponent(key)}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(opts),
+    });
+    const r=await res.json();
+    if(!r.ok){
+      if(r.error && r.error.includes('already running')) {
+         appendLog('info', 'Phase is already running. Attaching to stream...');
+         connect();
+      } else {
+         appendLog('err','Failed to start phase: ' + (r.error||''));
+         activePhase=null;tag.textContent='Idle';tag.className='tag idle';render();
+         reject(r.error);
+      }
+    } else {
+      connect();
+    }
+  });
+}
+
+function appendLog(type,line,ts){
+  const box=document.getElementById('logBox');
+  const div=document.createElement('div');
+  div.className='log-line '+type;
+  const time=ts?new Date(ts).toLocaleTimeString():'';
+  div.innerHTML=time?`<span class="log-ts">${time}</span>${esc(line)}`:esc(line);
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+}
+
+function toggleLog(){
+  logOpen=!logOpen;
+  document.getElementById('logBox').classList.toggle('open',logOpen);
+  document.getElementById('logArrow').textContent=logOpen?'▼':'▶';
+}
+
+function openLog(){
+  if(!logOpen){logOpen=true;document.getElementById('logBox').classList.add('open');document.getElementById('logArrow').textContent='▼';}
+}
+
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
+load();
+</script>
+</body>
+</html>

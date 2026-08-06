@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bible Class - New Run</title>
+<link rel="stylesheet" href="/app.css">
+<style>
+.upload-zone {
+  border: 1px dashed var(--border-active);
+  border-radius: var(--radius-md);
+  padding: 2.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  position: relative;
+}
+.local-folder-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.local-folder-panel input {
+  font-family: var(--font-mono);
+}
+.fallback-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 1rem 0 0.6rem;
+  text-transform: uppercase;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--cyan);
+  background: var(--cyan-light);
+}
+.upload-zone:focus-within {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.upload-zone .icon {
+  font-size: 1.25rem;
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-weight: bold;
+}
+.upload-zone .hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.upload-zone .count {
+  font-size: 0.78rem;
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.thumb-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.thumb {
+  width: 90px;
+  height: 90px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+}
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.thumb .remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  opacity: 0;
+}
+.thumb:hover .remove {
+  opacity: 1;
+}
+
+.model-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.model-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  text-align: left;
+  cursor: pointer;
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: var(--transition);
+  position: relative;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.model-card:hover {
+  border-color: var(--cyan);
+  background: rgba(255, 255, 255, 0.85);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.model-card.selected {
+  border-color: var(--cyan);
+  background: var(--cyan-light);
+  box-shadow: var(--shadow-md);
+}
+.model-card .model-badge,
+.model-card h3,
+.model-card .model-name,
+.model-card .cli {
+  position: relative;
+  z-index: 2;
+}
+.card-logo {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 68px;
+  height: 68px;
+  z-index: 1;
+  opacity: 0.6;
+  pointer-events: none;
+  transition: var(--transition);
+}
+.card-logo svg {
+  width: 100%;
+  height: 100%;
+}
+.model-card:hover .card-logo {
+  transform: translateY(-50%) scale(1.08) rotate(-3deg);
+}
+.model-card.selected .card-logo {
+  opacity: 0.8;
+  transform: translateY(-50%) scale(1.12) rotate(-6deg);
+}
+.model-card .model-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+.model-card.selected .model-badge {
+  color: var(--cyan);
+  border-color: rgba(8, 145, 178, 0.3);
+  background: var(--bg-card);
+}
+.model-card h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.model-card .model-name {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.model-card .cli {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+.model-card.selected .cli {
+  color: var(--cyan);
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.progress-bar {
+  height: 4px;
+  background: var(--border-subtle);
+  border-radius: 2px;
+  margin-top: 1.5rem;
+  overflow: hidden;
+  display: none;
+}
+.progress-bar.active {
+  display: block;
+}
+.progress-bar .fill {
+  height: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 5px var(--cyan);
+  border-radius: 2px;
+  transition: width 0.3s;
+  width: 0;
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-inner">
+    <a href="/">← Dashboard</a>
+    <span class="sep">/</span>
+    <h1>New Bible Class Run</h1>
+  </div>
+</div>
+<div class="main">
+
+  <div class="section">
+    <h2>Step 1: Local Lesson Image Folder 本地教案图片文件夹</h2>
+    <div class="upload-zone" id="dropZone" tabindex="0" onclick="pickFolder()" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();pickFolder()}" aria-label="Select lesson plan folder" role="button">
+      <div class="icon">[FOLDER]</div>
+      <div class="hint" id="folderHint">点击选择教案图片文件夹（系统文件夹选择器），CLI 将直接读取文件夹内全部图片</div>
+      <div class="count" id="imageCount"></div>
+    </div>
+    <div class="thumb-grid" id="fileList"></div>
+  </div>
+
+  <div class="section">
+    <h2>Step 2: Select AI Model 选择模型</h2>
+    <div class="model-cards">
+      <div class="model-card" data-model="gpt" tabindex="0" onclick="selectModel('gpt')" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();selectModel('gpt')}" role="radio" aria-checked="false">
+        <div class="model-badge">GPT</div>
+        <h3>GPT-5.5</h3>
+        <div class="model-name">OpenAI GPT-5.5 via codex CLI</div>
+        <div class="card-logo">
+          <svg viewBox="0 0 24 24" fill="#10a37f" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="model-card selected" data-model="claude" tabindex="0" onclick="selectModel('claude')" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();selectModel('claude')}" role="radio" aria-checked="true">
+        <div class="model-badge">CLAUDE</div>
+        <h3>Claude Opus 4.8</h3>
+        <div class="model-name">Anthropic Claude Opus 4.8 via claude CLI</div>
+        <div class="card-logo">
+          <svg viewBox="0 0 24 24" fill="#d97757" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="model-card" data-model="gemini" tabindex="0" onclick="selectModel('gemini')" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();selectModel('gemini')}" role="radio" aria-checked="false">
+        <div class="model-badge">GEMINI</div>
+        <h3>Gemini Pro</h3>
+        <div class="model-name">Google Gemini via gemini CLI（默认 Pro 模型）</div>
+        <div class="card-logo">
+          <svg viewBox="0 0 24 24" fill="url(#gemini-grad)" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gemini-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#4285f4"/>
+                <stop offset="30%" stop-color="#9b72cb"/>
+                <stop offset="70%" stop-color="#d96a70"/>
+                <stop offset="100%" stop-color="#f4c542"/>
+              </linearGradient>
+            </defs>
+            <path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+  <div class="section">
+    <h2>Step 3: Run Info 运行信息</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="runId">Run ID (auto-generated if empty)</label>
+        <input id="runId" placeholder="e.g. bc-david-goliath (leave empty for auto)">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="extraText">Additional context (optional)</label>
+        <textarea id="extraText" rows="3" placeholder="Any extra notes about this lesson..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-accent" id="startBtn" onclick="startRun()" disabled>
+      ▶ Create & Understand
+    </button>
+    <button class="btn btn-primary" id="goExecBtn" onclick="goExecute()" style="display:none">
+      ⚡ Continue to Execute Phases
+    </button>
+  </div>
+
+  <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+  <div class="error-box" id="errorBox"></div>
+  <div class="log-box" id="logBox"></div>
+</div>
+
+<script>
+let selectedModel = 'claude';
+let createdRunId = null;
+let selectedFolder = null; // { path, imageCount, images }
+let pickerOpen = false;
+
+async function pickFolder() {
+  if (pickerOpen) return;
+  pickerOpen = true;
+  document.getElementById('folderHint').textContent = '系统文件夹选择窗口已打开，请在弹出的对话框中选择...';
+  try {
+    const r = await fetch('/api/pick-folder', { method: 'POST' }).then(res => res.json());
+    if (r.ok) {
+      selectedFolder = r;
+      hideError();
+    } else if (r.cancelled) {
+      // user cancelled, keep previous selection
+    } else {
+      selectedFolder = null;
+      showError(`文件夹不可用: ${r.error || 'unknown'}${r.path ? ' (' + r.path + ')' : ''}`);
+    }
+  } catch (e) {
+    showError('Folder picker failed: ' + e.message);
+  }
+  pickerOpen = false;
+  renderFolder();
+  updateStartBtn();
+}
+
+function renderFolder() {
+  const hint = document.getElementById('folderHint');
+  const count = document.getElementById('imageCount');
+  const list = document.getElementById('fileList');
+  if (selectedFolder) {
+    hint.textContent = selectedFolder.path;
+    count.textContent = `${selectedFolder.imageCount} 张图片将按文件名顺序作为教案页`;
+    list.innerHTML = selectedFolder.images.map((name, i) =>
+      `<span style="font-size:.72rem;font-family:var(--font-mono);background:var(--bg-panel);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:.2rem .5rem;color:var(--text-muted)">${i + 1}. ${esc(name)}</span>`
+    ).join('');
+  } else {
+    hint.textContent = '点击选择教案图片文件夹（系统文件夹选择器），CLI 将直接读取文件夹内全部图片';
+    count.textContent = '';
+    list.innerHTML = '';
+  }
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+
+function selectModel(m) {
+  selectedModel = m;
+  document.querySelectorAll('.model-card').forEach(c => c.classList.toggle('selected', c.dataset.model === m));
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  document.getElementById('startBtn').disabled = !selectedFolder;
+}
+
+function showError(msg) { const b = document.getElementById('errorBox'); b.textContent = msg; b.classList.add('show'); }
+function hideError() { document.getElementById('errorBox').classList.remove('show'); }
+
+function appendLog(type, line) {
+  const box = document.getElementById('logBox');
+  box.classList.add('open');
+  const div = document.createElement('div');
+  div.className = 'log-line ' + type;
+  div.textContent = line;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function startRun() {
+  hideError();
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true; btn.textContent = '⏳ Processing...';
+  document.getElementById('logBox').innerHTML = '';
+  const bar = document.getElementById('progressBar');
+  bar.classList.add('active');
+  document.getElementById('progressFill').style.width = '5%';
+
+  const rid = document.getElementById('runId').value.trim() || 'bc-' + Date.now();
+  if (!selectedFolder) { showError('请先选择教案图片文件夹'); btn.disabled = false; btn.textContent = '▶ Create & Understand'; return; }
+
+  // Step 1: Create run, importing images from the selected local folder.
+  appendLog('info', `Creating run from ${selectedFolder.path} ...`);
+  let res;
+  try {
+    res = await fetch('/api/runs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      id: rid,
+      inputText: document.getElementById('extraText').value.trim(),
+      model: selectedModel,
+      imageFolderPath: selectedFolder.path,
+    })});
+  } catch (e) { showError('Failed to create run: ' + e.message); btn.disabled = false; btn.textContent = '▶ Create & Understand'; return; }
+  const run = await res.json();
+  if (!run.ok) { showError(run.error || 'Failed'); btn.disabled = false; btn.textContent = '▶ Create & Understand'; return; }
+  createdRunId = run.id;
+  appendLog('info', `Run created: ${run.id}`);
+  appendLog('info', `Imported ${run.imageCount} local image(s)`);
+  (run.images || []).forEach((name) => appendLog('info', `  ✓ ${name}`));
+  document.getElementById('progressFill').style.width = '30%';
+
+  // Step 3: Start image understanding
+  const displayNames = {
+    'gpt': 'GPT-5.5',
+    'claude': 'Claude Opus 4.8',
+    'gemini': 'Gemini Pro'
+  };
+  appendLog('info', `Starting image understanding with ${displayNames[selectedModel]}...`);
+
+  const es = new EventSource(`/api/runs/${run.id}/execute/understand-images/stream`);
+  es.addEventListener('log', (e) => { const d = JSON.parse(e.data); appendLog(d.type, d.line); });
+  es.addEventListener('status', (e) => {
+    const d = JSON.parse(e.data);
+    if (d.status === 'done') {
+      appendLog('info', 'Image understanding complete!');
+      document.getElementById('progressFill').style.width = '100%';
+      es.close();
+      btn.style.display = 'none';
+      document.getElementById('goExecBtn').style.display = '';
+      appendLog('info', '即将跳转到 Execute 页面...');
+      setTimeout(goExecute, 1500);
+    } else if (d.status === 'error') {
+      const msg = d.error || 'Unknown error';
+      if (msg.includes('does not support image input')) {
+        showError(`ERROR: ${selectedModel.toUpperCase()} model does not support image input. Please select a different model.`);
+      } else {
+        showError(msg);
+      }
+      es.close();
+      btn.disabled = false; btn.textContent = '▶ Create & Understand';
+    }
+  });
+  es.onerror = () => { es.close(); };
+
+  const execRes = await fetch(`/api/runs/${run.id}/execute/understand-images`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: selectedModel }),
+  });
+  const er = await execRes.json();
+  if (!er.ok) {
+    showError(er.error || 'Failed to start');
+    es.close();
+    btn.disabled = false; btn.textContent = '▶ Create & Understand';
+  }
+}
+
+function goExecute() {
+  if (createdRunId) window.location.href = `/run/${createdRunId}/execute`;
+}
+</script>
+</body>
+</html>

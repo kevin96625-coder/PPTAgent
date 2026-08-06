@@ -10,11 +10,16 @@ const PRICES = {
   'openai-api': {
     'gpt-image-2': 0.04,
   },
+  // Direct-fetch OpenAI backend — same models/prices as openai-api.
+  'openai-fetch': {
+    'gpt-image-2': 0.04,
+  },
 };
 
 const DEFAULT_MODEL = {
   'gemini-api': 'nano-banana-2',
   'openai-api': 'gpt-image-2',
+  'openai-fetch': 'gpt-image-2',
 };
 
 /**

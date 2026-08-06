@@ -44,6 +44,28 @@ teacher approval before any images are generated.
   "title": "string",
   "approved": false,
   "scripture_ref": "string",
+  "character_age": "string (主角在本课事件中的准确年龄，由 content-core 联网查 scripture_ref 后填写，含简短经文依据。例如: \"约30岁（路加福音3:23 耶稣开始传道时约三十岁）\" / \"12岁男孩（路加福音2:42）\" / \"婴儿（马太福音2:1-2）\" / \"60-80岁老年（使徒行传7:23,30 摩西40岁逃米甸、80岁领百姓出埃及）\"。是 character_profile.age_appearance 的冗余快照，向后兼容用)",
+  "character_profile": {
+    "character_name": "string (第一主角姓名，由 content-core 从 lesson-source.json 识别后填写，如 耶稣/大卫/摩西/彼得)",
+    "age_appearance": "string (第一主角在本课事件中的年龄外观，联网查经得出，同 character_age)",
+    "ethnicity": "string (第一主角的民族/地域，基于圣经历史背景，如 1世纪犹太/近东地区)",
+    "hair_description": "string (头发/胡须描述，基于历史背景合理推断)",
+    "clothing": "string (服装描述，基于历史背景合理推断，如 亚麻及踝长袍、皮凉鞋)",
+    "palette": "string (配色方案，温暖柔和的色调)"
+  },
+  "characters": {
+    "<role_key>": {
+      "character_name": "string (角色姓名，如 耶稣/盲人/撒该)",
+      "role": "string (main=第一主角 | supporting=重要配角)",
+      "age_appearance": "string",
+      "ethnicity": "string",
+      "hair_description": "string",
+      "clothing": "string",
+      "palette": "string"
+    }
+  },
+  "characters_order": ["<role_key>", "..."],
+  "note: characters": "由 content-core 识别第一主角 + 跨≥2场出现且有动作/对话的重要配角(如盲人、撒该、拉撒路)。每个角色一套完整档案。匿名人群(门徒、群众、小朋友)不进 characters，留在 image_brief 自由发挥。character_profile 是 characters 第一主角项的快照，向后兼容。",
   "teaching": {
     "duration_min": 15,
     "scenes": [
@@ -54,7 +76,8 @@ teacher approval before any images are generated.
         "key_points": ["string (2-3条，每条幼儿可懂的动宾短句，用作右侧要点卡，如：天父刮大风 / 海水成两道墙)"],
         "narration": "string (3-5岁口语旁白)",
         "interaction": "string (互动提问)",
-        "image_brief": "string (画面描述，供生图。定妆照主角为中性neutral表情，此处需根据场面给主角补上轻量情绪词，如微笑、严肃、心疼、惊讶、困惑等，禁止夸张情绪。例如：摩西严肃地高举木杖伸向海面)"
+        "image_brief": "string (画面描述，供生图。定妆照主角为中性neutral表情，此处需根据场面给主角补上轻量情绪词，如微笑、严肃、心疼、惊讶、困惑等，禁止夸张情绪。例如：摩西严肃地高举木杖伸向海面)",
+        "characters": ["role_key (本场景出场的角色 key 列表，对应 characters 映射的 key。如 [\"jesus\"] 或 [\"jesus\",\"blindman\"]。生图时只传这些角色的定妆照。若本场景无 characters 里的角色(如纯人群场景)，可留空数组，将只传第一主角定妆照)"]
       }
     ]
   },
@@ -158,6 +181,12 @@ teacher approval before any images are generated.
    Display `lesson-outline.md` in full, then ask:
    ```
    📋 课程大纲已生成 — 请审阅：
+
+   👤 角色清单（已查经，将分别生成定妆照）：
+      主角：{character_profile.character_name}，{character_profile.age_appearance}
+      配角：{for each supporting character in characters: character_name, role}
+      ⚠️ 请确认主角身份/年龄准确，以及配角识别是否合理（跨≥2场、有戏份的具名/半具名角色才进清单；匿名门徒/群众不应在此）。
+      例：约翰福音9 = 主角耶稣 + 配角盲人。若不对，请在大纲修改反馈里说明。
 
    {contents of lesson-outline.md}
 
@@ -277,6 +306,12 @@ Ask the teacher to describe the main character (usually Jesus, but could be anot
 可以直接回复"默认耶稣"使用标准描述，或逐项提供自定义描述。
 ```
 
+**Age resolution (重要):** Before asking the teacher, read `lesson-outline.json`'s top-level
+`character_age` field (set in Phase 2 by content-core's scripture lookup). If it is non-empty,
+use it as `age_appearance` — do NOT fall back to the 30-year-old default. This is how the
+scripture-grounded age flows from the outline into the master reference. Only when
+`character_age` is empty/missing should you fall back to the defaults below.
+
 If the user replies "默认耶稣" or similar, use the default character description:
 
 ```json
@@ -290,7 +325,7 @@ If the user replies "默认耶稣" or similar, use the default character descrip
 }
 ```
 
-Otherwise, parse the user's custom description into the same JSON structure. If any required field is missing, ask for it explicitly.
+Otherwise, parse the user's custom description into the same JSON structure. If any required field is missing, ask for it explicitly. In all cases, prefer `character_age` from the outline over any hardcoded default for the age.
 
 Store the character description JSON in a shell variable or temp file:
 ```bash

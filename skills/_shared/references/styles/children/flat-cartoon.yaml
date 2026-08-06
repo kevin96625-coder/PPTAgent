@@ -12,7 +12,6 @@ identity_block_template: |
   Clothing: {clothing}
   Color palette for this character: {palette}
   Expression default: warm gentle smile
-  Art style lock: flat rounded cartoon, bold black outlines, no photorealism, no gradients on faces
   This character must look IDENTICAL across all scenes — same hair, same clothing colors, same face proportions.
 
 style_block: |

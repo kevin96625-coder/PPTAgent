@@ -10,3 +10,5 @@ openspec/
 !.env.example
 *.key
 *.secret
+*.log
+server.log

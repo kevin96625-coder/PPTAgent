@@ -46,6 +46,13 @@ async function run(args, deps = {}) {
   if (!args.runDir || !args.label || !args.out) {
     throw new Error('run: --run-dir, --label and --out are required');
   }
+  // Normalize args from batch jobs JSON: default the backend and accept a
+  // singular `reference` field (used by the bible-class web phases).
+  args = { ...args };
+  if (!args.backend) args.backend = 'openai-fetch';
+  if (!args.references || !args.references.length) {
+    args.references = args.reference ? [args.reference] : [];
+  }
   const sceneBrief = args.prompt || readMaybe(args.promptFile);
   if (!sceneBrief || !sceneBrief.trim()) {
     throw new Error('run: provide --prompt or --prompt-file');

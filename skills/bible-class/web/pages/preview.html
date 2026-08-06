@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bible Class - Preview</title>
+<link rel="stylesheet" href="/app.css">
+<style>
+body {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 1.5rem;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.toolbar a {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.toolbar a:hover {
+  color: var(--text-main);
+}
+.toolbar h1 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.nav button {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: var(--transition);
+}
+.nav button:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-active);
+  color: var(--text-main);
+}
+.nav span {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--cyan);
+  min-width: 55px;
+  text-align: center;
+}
+.toolbar .btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(8, 145, 178, 0.3);
+  background: var(--cyan-light);
+  color: var(--cyan);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition);
+}
+.toolbar .btn:hover {
+  background: var(--cyan);
+  color: #ffffff;
+  border-color: var(--cyan);
+}
+ 
+.content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+ 
+.sidebar {
+  width: 180px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border-active);
+  border-radius: 2px;
+}
+.slide-item {
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+  transition: var(--transition);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-sm);
+}
+.slide-item:hover {
+  border-color: var(--cyan);
+  background: rgba(255, 255, 255, 0.85);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.slide-item.active {
+  border-color: var(--cyan);
+  background: var(--cyan-light);
+  box-shadow: var(--shadow-md);
+}
+.slide-item .num {
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+.slide-item .thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+.slide-item.active .thumb {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.slide-item.active .num {
+  color: var(--cyan);
+}
+
+.frame-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+.frame-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.info-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1.5rem;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+.info-bar .keys kbd {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  margin: 0 0.15rem;
+  color: var(--cyan);
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    padding: 0.6rem 0.75rem;
+    gap: 0.45rem;
+  }
+  .toolbar h1 {
+    min-width: 0;
+  }
+  .nav {
+    gap: 0.25rem;
+  }
+  .nav button,
+  .toolbar .btn {
+    padding: 0.3rem 0.45rem;
+    font-size: 0.68rem;
+  }
+  .nav span {
+    min-width: 42px;
+    font-size: 0.68rem;
+  }
+  .sidebar {
+    width: 112px;
+    padding: 0.5rem;
+  }
+  .frame-wrap {
+    padding: 0.75rem;
+  }
+  .info-bar {
+    padding: 0.45rem 0.75rem;
+  }
+  .info-bar .keys {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <a id="backLink" href="#">← Back</a>
+  <h1 id="title">Preview</h1>
+  <div class="nav">
+    <button onclick="prev()" aria-label="Previous slide">← Prev</button>
+    <span id="counter" aria-label="Slide position">0/0</span>
+    <button onclick="next()" aria-label="Next slide">Next →</button>
+  </div>
+  <a id="downloadBtn" class="btn" href="#">Download PPTX</a>
+</div>
+<div class="content">
+  <div class="sidebar" id="sidebar" role="listbox" aria-label="Slide list"></div>
+  <div class="frame-wrap">
+    <iframe id="frame" src="about:blank" aria-label="Slide presentation viewer"></iframe>
+  </div>
+</div>
+<div class="info-bar">
+  <span id="slideInfo" aria-live="polite"></span>
+  <span style="flex:1"></span>
+  <span class="keys"><kbd>←</kbd><kbd>→</kbd> Navigate <kbd>F</kbd> Fullscreen</span>
+</div>
+<script>
+const runId=location.pathname.split('/')[2];
+let slides=[];let idx=0;let runData=null;
+
+async function load(){
+  runData=await(await fetch(`/api/runs/${runId}`)).json();
+  document.getElementById('title').textContent=runData.title||runId;
+  document.getElementById('downloadBtn').href=`/api/runs/${runId}/pptx`;
+  document.getElementById('backLink').href=`/run/${runId}`;
+  if(!runData.hasPptx)document.getElementById('downloadBtn').style.display='none';
+  slides=runData.slides||[];
+  renderSidebar();
+  if(slides.length){show(0);}
+  else{document.getElementById('frame').srcdoc='<h2 style="padding:4rem;color:#999">No slides found</h2>';}
+}
+
+function renderSidebar(){
+  document.getElementById('sidebar').innerHTML=slides.map((s,i)=>`<div class="slide-item ${i===idx?'active':''}" data-i="${i}" tabindex="0" onclick="show(${i})" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();show(${i})}" role="button" aria-label="View slide ${i+1}">
+    <div class="num">${s}</div>
+    <div class="thumb">Slide ${i+1}</div>
+  </div>`).join('');
+}
+
+function show(i){
+  idx=i;
+  document.getElementById('frame').src=`/api/runs/${runId}/slides/${slides[i]}`;
+  document.getElementById('counter').textContent=`${i+1}/${slides.length}`;
+  document.querySelectorAll('.slide-item').forEach((el,j)=>{
+    el.classList.toggle('active',j===i);
+  });
+  if(runData.sceneImages){
+    const sceneIdx=i;
+    const scene=runData.sceneImages.find(s=>s.index===sceneIdx);
+    let info=slides[i];
+    if(scene)info+=` — ${scene.title}`;
+    document.getElementById('slideInfo').textContent=info;
+  }else{
+    document.getElementById('slideInfo').textContent=slides[i];
+  }
+  const item=document.querySelector('.slide-item.active');
+  if(item)item.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+
+function prev(){if(idx>0)show(idx-1);}
+function next(){if(idx<slides.length-1)show(idx+1);}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')prev();
+  if(e.key==='ArrowRight')next();
+  if(e.key==='f'||e.key==='F'){
+    const frame=document.getElementById('frame');
+    if(frame.requestFullscreen)frame.requestFullscreen();
+  }
+});
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bible Class - Dashboard</title>
+<link rel="stylesheet" href="/app.css">
+<style>
+.topbar .new-btn {
+  background: var(--cyan-light);
+  border: 1px solid rgba(8, 145, 178, 0.3);
+  color: var(--cyan);
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition);
+}
+.topbar .new-btn:hover {
+  background: var(--cyan);
+  color: #ffffff;
+  border-color: var(--cyan);
+}
+.topbar .badge {
+  background: var(--cyan-light);
+  border: 1px solid rgba(8, 145, 178, 0.25);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  color: var(--cyan);
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stat {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+.stat .num {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--cyan);
+  font-family: var(--font-mono);
+}
+.stat .label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  letter-spacing: 0.03em;
+}
+.search {
+  margin-bottom: 1.5rem;
+}
+.search input {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  background: var(--bg-card);
+  color: var(--text-main);
+  transition: var(--transition);
+}
+.search input:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
+}
+#runs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+.card {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: var(--transition);
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+.card:hover {
+  border-color: var(--cyan);
+  background: rgba(255, 255, 255, 0.85);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+.card-main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+  padding-right: 0;
+}
+.card-cover {
+  width: 100%;
+  aspect-ratio: 16/10;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cover-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+}
+.cover-placeholder svg {
+  width: 32px;
+  height: 32px;
+  opacity: 0.4;
+}
+.card-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.5rem;
+}
+.card h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 0.15rem;
+  line-height: 1.4;
+}
+.card .meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+.pipeline {
+  height: 6px;
+  background: var(--border-subtle);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+}
+.pipeline .seg {
+  height: 100%;
+}
+.phases-row {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+.phase {
+  font-size: 0.62rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+.phase.done {
+  border-color: rgba(21, 128, 97, 0.25);
+  background: var(--green-light);
+  color: var(--green);
+}
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.progress-text {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.scene-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.empty {
+  text-align: center;
+  padding: 4rem;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  grid-column: 1 / -1;
+}
+.delete-run {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(185, 28, 28, 0.2);
+  background: rgba(254, 242, 242, 0.85);
+  backdrop-filter: blur(4px);
+  color: var(--red);
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.delete-run:hover {
+  background: var(--red);
+  color: #ffffff;
+  border-color: var(--red);
+  transform: scale(1.1);
+}
+.delete-run:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(4px);
+}
+.modal-backdrop[hidden] {
+  display: none;
+}
+.delete-dialog {
+  width: min(480px, 100%);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(185, 28, 28, 0.2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 1.5rem;
+}
+.delete-dialog .eyebrow {
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+.delete-dialog h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.75rem;
+}
+.delete-dialog p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.modal-project {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  color: var(--text-main) !important;
+  font-weight: 600;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+.feedback-toast {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 950;
+  max-width: min(420px, calc(100vw - 2rem));
+  padding: 0.85rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--text-main);
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: var(--transition);
+  font-size: 0.85rem;
+}
+.feedback-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.feedback-toast.success {
+  border-color: rgba(21, 128, 61, 0.25);
+  background: rgba(240, 253, 244, 0.88);
+  color: var(--green);
+}
+.feedback-toast.error {
+  border-color: rgba(185, 28, 28, 0.25);
+  background: rgba(254, 242, 242, 0.88);
+  color: var(--red);
+}
+.feedback-toast.warning {
+  border-color: rgba(194, 65, 12, 0.25);
+  background: rgba(255, 247, 237, 0.88);
+  color: var(--amber);
+}
+@media (max-width: 1024px) {
+  #runs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  #runs {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+  .modal-actions .btn {
+    flex: 1;
+  }
+  .feedback-toast {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+  }
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-inner">
+    <h1>Bible Class Workflow Console</h1>
+    <a class="new-btn" href="/new">+ New Run</a>
+    <span class="badge" id="totalBadge" aria-label="Total runs count">0 runs</span>
+  </div>
+</div>
+<div class="container">
+  <div class="stats" id="stats"></div>
+  <div class="search">
+    <input id="q" placeholder="Search by title, scripture, or ID..." oninput="render()" aria-label="Search workflow runs">
+  </div>
+  <div id="runs"></div>
+</div>
+<div class="modal-backdrop" id="deleteModal" hidden>
+  <section class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle" aria-describedby="deleteModalDesc">
+    <div class="eyebrow">Destructive Action</div>
+    <h2 id="deleteModalTitle">确认删除这个项目？</h2>
+    <p id="deleteModalDesc">这会删除项目目录下的全部文件，包括输入资料、生成图片、HTML 和 PPTX 结果。删除后无法恢复。</p>
+    <p class="modal-project" id="deleteProjectName"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="deleteCancelBtn" onclick="closeDeleteModal()">取消</button>
+      <button class="btn btn-danger" id="deleteConfirmBtn" onclick="confirmDeleteRun()">永久删除</button>
+    </div>
+  </section>
+</div>
+<div class="feedback-toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+const PHASES=['content-research','outline-draft','outline-approved','style-locked','master-generated','master-approved','scenes-generated','html-composed','pptx-delivered'];
+const PL={'content-research':'内容研究','outline-draft':'大纲草稿','outline-approved':'大纲已批','style-locked':'风格锁定','master-generated':'定妆照生成','master-approved':'定妆照已批','scenes-generated':'场景图','html-composed':'HTML合成','pptx-delivered':'PPTX交付'};
+let runs=[];
+let pendingDelete=null;
+let toastTimer=null;
+async function load(){runs=(await(await fetch('/api/runs')).json()).runs;render();}
+function render(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const filtered=runs.filter(r=>(r.title+r.scripture+r.id).toLowerCase().includes(q));
+  const completed=runs.filter(r=>r.phases.includes('pptx-delivered')).length;
+  const inProgress=runs.length-completed;
+  document.getElementById('totalBadge').textContent=runs.length+' runs';
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="num">${runs.length}</div><div class="label">Total Runs</div></div>
+    <div class="stat"><div class="num">${completed}</div><div class="label">Completed</div></div>
+    <div class="stat"><div class="num">${inProgress}</div><div class="label">In Progress</div></div>
+    <div class="stat"><div class="num">${runs.reduce((s,r)=>s+r.sceneCount,0)}</div><div class="label">Total Scenes</div></div>`;
+  const el=document.getElementById('runs');
+  if(!filtered.length){el.innerHTML='<div class="empty">暂无运行记录</div>';return;}
+  el.innerHTML=filtered.map(run=>{
+    const done=run.phases.length;
+    const total=PHASES.length;
+    const pct=Math.round(done/total*100);
+    const displayTitle=run.title||run.id;
+    const pipes=PHASES.map((p,i)=>{
+      const isDone=run.phases.includes(p);
+      const isNext=!isDone&&run.phases.includes(PHASES[i-1]||'');
+      return`<div class="seg ${isDone?'done':''} ${isNext?'current':''}" title="${PL[p]||p}"></div>`;
+    }).join('');
+    const tags=run.phases.map(p=>`<span class="phase done">${PL[p]||p}</span>`).join('');
+    const hasMaster = run.phases.includes('master-generated') || run.phases.includes('master-approved') || run.phases.includes('style-locked');
+    const hasScenes = run.phases.includes('scenes-generated') || run.phases.includes('html-composed') || run.phases.includes('pptx-delivered');
+    let imgSrc = '';
+    if (hasMaster) {
+      imgSrc = `/api/runs/${run.id}/master/master-reference.png`;
+    } else if (hasScenes) {
+      imgSrc = `/api/runs/${run.id}/images/scene-01.png`;
+    }
+    return`<article class="card">
+      <button class="delete-run" onclick="deleteRun(event)" data-run-id="${attr(run.id)}" data-run-title="${attr(displayTitle)}" aria-label="Delete run ${attr(displayTitle)}">×</button>
+      <a class="card-main" href="/run/${run.id}" aria-label="Open run ${attr(displayTitle)}">
+        <div class="card-cover">
+          ${imgSrc ? `<img src="${imgSrc}" alt="${esc(displayTitle)}" loading="lazy">` : `
+            <div class="cover-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>No Output Image</span>
+            </div>
+          `}
+        </div>
+        <div class="card-body">
+          <h2>${esc(run.title)}</h2>
+          <div class="meta">${esc(run.scripture)} · ${run.updatedAt.slice(0,10)}</div>
+          <div class="pipeline">${pipes}</div>
+          <div class="progress-info">
+            <span class="progress-text">${done}/${total} Phases (${pct}%)</span>
+            ${run.sceneCount?`<span class="scene-count">${run.sceneCount} Scenes</span>`:''}
+          </div>
+          <div class="phases-row">${tags}</div>
+        </div>
+      </a>
+    </article>`;
+  }).join('');
+}
+async function deleteRun(event){
+  event.preventDefault();
+  event.stopPropagation();
+  const btn=event.currentTarget;
+  const id=btn.dataset.runId;
+  const title=btn.dataset.runTitle||id;
+  pendingDelete={id,title,button:btn};
+  document.getElementById('deleteProjectName').textContent=title;
+  document.getElementById('deleteModal').hidden=false;
+  setTimeout(()=>document.getElementById('deleteCancelBtn').focus(),0);
+}
+function closeDeleteModal(){
+  document.getElementById('deleteModal').hidden=true;
+  const btn=pendingDelete&&pendingDelete.button;
+  pendingDelete=null;
+  if(btn)btn.focus();
+}
+async function confirmDeleteRun(){
+  if(!pendingDelete)return;
+  const {id,title,button:btn}=pendingDelete;
+  const confirmBtn=document.getElementById('deleteConfirmBtn');
+  btn.disabled=true;
+  btn.textContent='Deleting';
+  confirmBtn.disabled=true;
+  confirmBtn.textContent='Deleting';
+  try{
+    const res=await fetch(`/api/runs/${encodeURIComponent(id)}`,{method:'DELETE'});
+    const body=await res.json().catch(()=>({}));
+    if(!res.ok||!body.ok){
+      throw new Error(await friendlyDeleteError(res.status,body,title,id));
+    }
+    runs=runs.filter(r=>r.id!==id);
+    closeDeleteModal();
+    render();
+    showToast(`已删除项目「${title}」。`,'success');
+  }catch(err){
+    closeDeleteModal();
+    showToast(err.message||`删除失败：无法删除「${title}」，请稍后重试。`,'error');
+    btn.disabled=false;
+    btn.textContent='Delete';
+  }finally{
+    confirmBtn.disabled=false;
+    confirmBtn.textContent='永久删除';
+  }
+}
+async function friendlyDeleteError(status,body,title,id){
+  if(status===404){
+    if(await runStillExists(id)){
+      return `删除失败：服务器没有执行删除操作。「${title}」仍然存在，请重启 WebUI 服务后再试。`;
+    }
+    runs=runs.filter(r=>r.id!==id);
+    render();
+    return `删除失败：未找到「${title}」。项目可能已被删除，列表已同步刷新。`;
+  }
+  if(status===409)return `暂时不能删除「${title}」：项目正在执行流程，请等当前阶段结束后再试。`;
+  if(body&&body.error)return `删除失败：${body.error}`;
+  return `删除失败：服务器返回 ${status||'未知错误'}，请检查服务状态后重试。`;
+}
+async function runStillExists(id){
+  try{
+    const res=await fetch(`/api/runs/${encodeURIComponent(id)}`,{cache:'no-store'});
+    return res.ok;
+  }catch{
+    return true;
+  }
+}
+function showToast(message,type='error'){
+  const toast=document.getElementById('toast');
+  toast.textContent=message;
+  toast.className=`feedback-toast show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{toast.className='feedback-toast';},4200);
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function attr(s){return esc(s).replace(/"/g,'&quot;');}
+load();
+</script>
+</body>
+</html>

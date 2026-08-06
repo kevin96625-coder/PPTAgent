@@ -31,6 +31,39 @@ function esc(text) {
  * @param {{type:string, title:string, body:string, imageSrc?:string, subtext?:string, scripture?:string, points?:string[], preset?:string}} opts
  * @returns {string}
  */
+// Visual mirror of the PPTX "designed" preset (designed_preset.js in
+// html-slide-to-pptx): cream page, navy header, rounded hero image, white
+// point card with orange border, orange interaction footer. Keeping the CSS
+// inline makes each slide HTML self-contained for previews.
+const DESIGNED_CSS = `
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; }
+  body { font-family: 'PingFang SC', 'Hiragino Sans GB', sans-serif; background: #FBF7EF; overflow: hidden; }
+  body[data-slide-type="scene"] { display: grid; grid-template-rows: 7.2% 1fr 9.6%; }
+  .scene-header { background: #163A5F; color: #fff; display: flex; align-items: center; padding: 0 3.75%; font-size: 1.95vw; }
+  .scene-main { display: flex; gap: 3%; padding: 3% 3.75%; min-height: 0; }
+  .storybook-image { flex: 0 0 55%; min-width: 0; }
+  .storybook-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 1.2vw; display: block; }
+  .storybook-caption { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .caption-title { color: #1E3A5F; font-size: 3.6vw; font-weight: 700; margin-bottom: 2.4vh; }
+  .caption-points { list-style: none; background: #FFFFFF; border: 0.18vw solid #F4A259; border-radius: 1.2vw; padding: 2.4vh 1.8vw; flex: 1; }
+  .caption-points li { color: #2B2B2B; font-size: 2.4vw; line-height: 1.6; padding-left: 1.6vw; position: relative; margin-bottom: 1.2vh; }
+  .caption-points li::before { content: '•'; position: absolute; left: 0; color: #F4A259; font-weight: 700; }
+  body[data-slide-type="scene"] .caption-body, body[data-slide-type="scene"] .caption-subtext { display: none; }
+  .scene-footer { background: #F4A259; color: #fff; display: flex; align-items: center; padding: 0 3.75%; font-size: 2.1vw; font-weight: 600; }
+  body[data-slide-type="cover"] { position: relative; }
+  body[data-slide-type="cover"] .storybook-image { position: absolute; inset: 0; }
+  body[data-slide-type="cover"] .storybook-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+  body[data-slide-type="cover"]::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 41%; background: linear-gradient(transparent, rgba(0,0,0,.65)); }
+  body[data-slide-type="cover"] .storybook-caption { position: absolute; left: 7.5%; right: 7.5%; bottom: 8%; z-index: 2; text-align: center; }
+  body[data-slide-type="cover"] .caption-title { color: #fff; font-size: 6vw; text-shadow: 0 2px 12px rgba(0,0,0,.5); }
+  body[data-slide-type="cover"] .caption-body { color: #F4A259; font-size: 2.4vw; margin-top: 1.5vh; }
+  body[data-slide-type="memory-verse"] { display: flex; align-items: center; justify-content: center; }
+  body[data-slide-type="memory-verse"] .storybook-caption { background: #FFFFFF; border: 0.25vw solid #F4A259; border-radius: 1.6vw; padding: 6vh 5vw; max-width: 72%; text-align: center; }
+  body[data-slide-type="memory-verse"] .caption-title { color: #163A5F; font-size: 3.9vw; line-height: 1.5; }
+  body[data-slide-type="memory-verse"] .caption-body { color: #F4A259; font-size: 2.2vw; margin-top: 2.4vh; }
+`;
+
 function renderSlideHtml({ type, title, body, imageSrc, subtext, scripture, points, preset = 'designed' }) {
   const imgBlock = imageSrc
     ? `  <div class="storybook-image">\n    <img src="${esc(imageSrc)}" alt="${esc(title)}">\n  </div>\n`
@@ -43,15 +76,24 @@ function renderSlideHtml({ type, title, body, imageSrc, subtext, scripture, poin
     ? `    <p class="caption-subtext">${esc(subtext)}</p>\n`
     : '';
   const scriptureAttr = scripture ? ` data-scripture="${esc(scripture)}"` : '';
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head><meta charset="UTF-8"><title>${esc(title)}</title></head>
-<body data-preset="${esc(preset)}" data-slide-type="${esc(type)}"${scriptureAttr}>
-${imgBlock}  <div class="storybook-caption">
+  // .caption-body/.caption-subtext stay in the DOM (hidden on scene slides)
+  // because the PPTX extractor (extractDesigned) reads them.
+  const captionBlock = `  <div class="storybook-caption">
     <h2 class="caption-title">${esc(title)}</h2>
 ${pointsBlock}    <p class="caption-body">${esc(body)}</p>
-${subtextBlock}  </div>
-</body>
+${subtextBlock}  </div>\n`;
+  // Scene slides mirror the PPTX designed layout: header / image+card / footer.
+  const layout = type === 'scene'
+    ? `  <div class="scene-header">${esc(scripture || '')}</div>
+  <div class="scene-main">
+${imgBlock}${captionBlock}  </div>
+  <div class="scene-footer">${subtext ? `💬 ${esc(subtext)}` : ''}</div>\n`
+    : `${imgBlock}${captionBlock}`;
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>${esc(title)}</title><style>${DESIGNED_CSS}</style></head>
+<body data-preset="${esc(preset)}" data-slide-type="${esc(type)}"${scriptureAttr}>
+${layout}</body>
 </html>`;
 }
 

@@ -12,7 +12,6 @@ identity_block_template: |
   Clothing: {clothing}
   Color palette for this character: {palette}
   Expression default: kind warm smile, large gentle eyes
-  Art style lock: stylized Disney-style 3D animation, rounded cartoonish proportions, matte non-realistic skin, NO subsurface scattering, NO photorealism
   This character must look IDENTICAL across all scenes — same hair color/style, same clothing, same face proportions.
 
 style_block: |

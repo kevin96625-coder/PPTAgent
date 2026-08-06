@@ -12,7 +12,6 @@ identity_block_template: |
   Clothing: {clothing}
   Color palette for this character: {palette}
   Expression default: big joyful smile
-  Art style lock: hand-drawn crayon marker style, wobbly outlines, no photorealism, no flat digital vector fills
   This character must look IDENTICAL across all scenes — same hair, same clothing colors, same face proportions.
 
 style_block: |

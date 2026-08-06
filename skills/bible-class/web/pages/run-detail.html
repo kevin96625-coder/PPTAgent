@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bible Class - Run Detail</title>
+<link rel="stylesheet" href="/app.css">
+<style>
+.verse-box {
+  background: var(--cyan-light);
+  border-left: 3px solid var(--cyan);
+  padding: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.verse-box .text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 0.35rem;
+}
+.verse-box .ref {
+  font-size: 0.78rem;
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.craft-list {
+  list-style: none;
+  counter-reset: step;
+}
+.craft-list li {
+  counter-increment: step;
+  padding: 0.4rem 0 0.4rem 2rem;
+  position: relative;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+.craft-list li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--cyan-light);
+  border: 1px solid rgba(8, 145, 178, 0.25);
+  color: var(--cyan);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.craft-materials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.craft-materials span {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.master-wrap {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.master-img {
+  width: 320px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+.master-info {
+  flex: 1;
+  min-width: 200px;
+}
+.master-info .status-badge {
+  margin-bottom: 0.75rem;
+}
+
+.scene-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+.scene-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.scene-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-active);
+}
+.scene-card.approved {
+  border-color: rgba(21, 128, 97, 0.45);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+}
+.scene-card.needs-redo {
+  border-color: rgba(185, 28, 28, 0.35);
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.08);
+}
+.scene-card .img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.scene-card .img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.scene-card .img-wrap .overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+.scene-card .img-wrap .badge {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+.scene-card .img-wrap .badge.approved {
+  background: var(--green);
+  color: #ffffff;
+}
+.scene-card .img-wrap .badge.redo {
+  background: var(--red);
+  color: #ffffff;
+}
+.scene-card .img-wrap .badge.missing {
+  background: var(--border-active);
+  color: var(--text-muted);
+}
+.scene-card .img-wrap .badge.number {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-main);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  border: 1px solid var(--border-subtle);
+  font-weight: 600;
+}
+.scene-card .body {
+  flex: 1;
+  padding: 1rem;
+}
+.scene-card .body h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 0.35rem;
+}
+.scene-card .body .key-msg {
+  font-size: 0.8rem;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+.scene-card .body .points {
+  list-style: none;
+  margin-bottom: 0.5rem;
+}
+.scene-card .body .points li {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 0.15rem 0 0.15rem 0.75rem;
+  position: relative;
+}
+.scene-card .body .points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.45rem;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--cyan);
+}
+.scene-card .body .brief {
+  font-size: 0.7rem;
+  color: var(--cyan);
+  background: var(--cyan-light);
+  border: 1px solid rgba(8, 145, 178, 0.2);
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+.scene-card .actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  padding: 0.65rem 0.75rem 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  align-items: stretch;
+}
+.scene-card .actions textarea {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  font-size: 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.5rem;
+  resize: vertical;
+  min-height: 52px;
+  height: 52px;
+  font-family: inherit;
+  color: var(--text-main);
+  line-height: 1.35;
+  transition: var(--transition);
+}
+.scene-card .actions textarea:focus {
+  border-color: var(--cyan);
+  outline: none;
+}
+.scene-card .action-buttons {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+.scene-card .action-buttons .btn {
+  width: 100%;
+  min-width: 0;
+}
+
+.slides-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+.slide-thumb {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border-subtle);
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.slide-thumb:hover {
+  border-color: var(--cyan);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.slide-thumb .preview {
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cyan);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.slide-thumb .label {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bottom-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  z-index: 1000;
+  opacity: 0;
+  transition: var(--transition);
+  pointer-events: none;
+  border: 1px solid transparent;
+}
+.toast.show {
+  opacity: 1;
+}
+.toast.success {
+  background: var(--green-light);
+  border-color: rgba(21, 128, 61, 0.4);
+  color: var(--green);
+}
+.toast.error {
+  background: var(--red-light);
+  border-color: rgba(185, 28, 28, 0.4);
+  color: var(--red);
+}
+
+.empty {
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 1rem 0;
+  font-size: 0.8rem;
+}
+
+.pipe {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.pipe .step { flex: 1; min-width: 64px; text-align: center; }
+.pipe .bar { height: 5px; border-radius: 3px; background: var(--border-subtle); }
+.pipe .step.done .bar { background: var(--green); box-shadow: 0 0 4px rgba(16,185,129,.4); }
+.pipe .lbl { font-size: 0.68rem; color: var(--text-dim); margin-top: 0.35rem; }
+.pipe .step.done .lbl { color: var(--green); font-weight: 600; }
+
+.source-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+.source-meta span {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.input-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.input-thumbs img {
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.input-thumbs img:hover { border-color: var(--cyan); transform: translateY(-2px); }
+
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-active);
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+}
+.empty-state h3 { font-size: 1rem; color: var(--text-main); margin-bottom: 0.5rem; }
+.empty-state p { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-inner">
+    <a href="/">Dashboard</a>
+    <span class="sep">/</span>
+    <h1 id="topTitle" style="flex:none">Loading...</h1>
+    <span style="flex:1"></span>
+    <span class="meta" id="topMeta"></span>
+  </div>
+</div>
+<div class="main">
+  <div class="pipe" id="pipeline"></div>
+
+  <div id="emptyState"></div>
+  <div id="sourceSection"></div>
+  <div id="verseSection"></div>
+  <div id="masterSection"></div>
+  <div id="scenesSection"></div>
+  <div id="craftSection"></div>
+  <div id="slidesSection"></div>
+
+  <div class="bottom-actions" id="bottomActions"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const runId=location.pathname.split('/')[2];
+let R=null;
+
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
+function toast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(()=>{t.className='toast'},2000);}
+
+async function api(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const res=await fetch(`/api/runs/${runId}${path}`,opts);
+  return res.json();
+}
+
+async function load(){
+  R=await(await fetch(`/api/runs/${runId}`)).json();
+  if(R.error){document.querySelector('.main').innerHTML='<p>Run not found</p>';return;}
+  document.getElementById('topTitle').textContent=R.title;
+  document.getElementById('topMeta').textContent=R.scripture;
+  renderPipeline();
+  renderEmptyState();
+  renderSource();
+  renderVerse();
+  renderMaster();
+  renderScenes();
+  renderCraft();
+  renderSlides();
+  renderActions();
+}
+
+// Each visual step merges draft+approved phases: gray = not started,
+// green = done, green + ✓ = approved.
+const STEPS=[
+  {label:'研究',test:p=>p.includes('content-research')},
+  {label:'大纲',test:p=>p.includes('outline-draft')||p.includes('outline-approved'),approved:p=>p.includes('outline-approved')},
+  {label:'风格',test:p=>p.includes('style-locked')},
+  {label:'定妆照',test:p=>p.includes('master-generated')||p.includes('master-approved'),approved:p=>p.includes('master-approved')},
+  {label:'场景图',test:p=>p.includes('scenes-generated')},
+  {label:'合成',test:p=>p.includes('html-composed')},
+  {label:'PPTX',test:p=>p.includes('pptx-delivered')},
+];
+
+function renderPipeline(){
+  document.getElementById('pipeline').innerHTML=STEPS.map(s=>{
+    const done=s.test(R.phases);
+    const ok=s.approved?s.approved(R.phases):done;
+    return`<div class="step ${done?'done':''}"><div class="bar"></div><div class="lbl">${s.label}${done&&ok?' ✓':''}</div></div>`;
+  }).join('');
+}
+
+const MODEL_LABELS={gpt:'GPT-5.5',claude:'Claude Opus 4.8',gemini:'Gemini Pro'};
+
+function renderEmptyState(){
+  const hasContent=R.memoryVerse||R.hasMaster||R.sceneImages.length||R.craft||R.slides.length;
+  if(hasContent){document.getElementById('emptyState').innerHTML='';return;}
+  document.getElementById('emptyState').innerHTML=`
+    <div class="empty-state">
+      <h3>项目已创建，尚未生成内容</h3>
+      <p>${R.inputImages&&R.inputImages.length?`已导入 ${R.inputImages.length} 张教案图片（见下方）。`:'还没有教案图片。'}前往 Execute 页面依次运行各阶段：理解教案 → 生成大纲 → 风格锁定 → 定妆照 → 场景图 → 合成 PPTX。</p>
+      <a href="/run/${runId}/execute" class="btn btn-accent">⚡ Execute Phases 开始生成</a>
+    </div>`;
+}
+
+function renderSource(){
+  const s=R.source;
+  const imgs=R.inputImages||[];
+  if(!s&&!imgs.length)return;
+  const meta=[];
+  if(s&&s.title)meta.push('课题: '+esc(s.title));
+  if(s&&s.scripture_ref)meta.push('经文: '+esc(s.scripture_ref));
+  if(s&&s.material_name)meta.push('教材: '+esc(s.material_name));
+  if(s&&s.age_group)meta.push('年龄: '+esc(s.age_group));
+  if(R.model)meta.push('分析模型: '+(MODEL_LABELS[R.model]||esc(R.model)));
+  const points=(s&&s.core_points&&s.core_points.length)?`<ul class="points" style="list-style:disc;padding-left:1.2rem;font-size:.82rem;color:var(--text-muted);margin-bottom:.85rem">${s.core_points.map(p=>`<li>${esc(p)}</li>`).join('')}</ul>`:'';
+  let extracted='';
+  if(s&&s.teaching_content)extracted+=`<p style="font-size:.82rem;color:var(--text-main);line-height:1.5;margin-bottom:.6rem"><strong>教学内容：</strong>${esc(s.teaching_content)}</p>`;
+  if(s&&s.craft_idea)extracted+=`<p style="font-size:.82rem;color:var(--text-muted);margin-bottom:.6rem"><strong>手工点子：</strong>${esc(s.craft_idea)}</p>`;
+  if(s&&s.memory_verse&&s.memory_verse.text&&!R.memoryVerse)extracted+=`<p style="font-size:.82rem;color:var(--cyan);margin-bottom:.6rem"><strong>金句：</strong>${esc(s.memory_verse.text)}（${esc(s.memory_verse.ref||'')}）</p>`;
+  const rawText=(s&&typeof s.raw_text==='string'&&s.raw_text.trim())?`<details style="margin-bottom:.85rem"><summary style="font-size:.78rem;color:var(--text-muted);cursor:pointer">查看教案识别原文 (${s.raw_text.length} 字)</summary><pre style="white-space:pre-wrap;font-size:.75rem;color:var(--text-muted);background:var(--bg-panel);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:.75rem;margin-top:.5rem;max-height:300px;overflow:auto">${esc(s.raw_text)}</pre></details>`:'';
+  const thumbs=imgs.length?`<div class="input-thumbs">${imgs.map(f=>`<img src="/api/runs/${runId}/input-images/${f}" alt="${esc(f)}" title="${esc(f)}" loading="lazy" onclick="window.open(this.src,'_blank')">`).join('')}</div>`:'';
+  const hasOutline=R.scenes&&R.scenes.length;
+  const exportBtn=hasOutline?`<a class="btn btn-sm btn-outline" style="float:right" href="/api/runs/${runId}/outline.html?download=1">⬇ 导出教学大纲 (HTML)</a> <a class="btn btn-sm btn-outline" style="float:right;margin-left:.5rem" href="/api/runs/${runId}/outline.html" target="_blank">👁 预览大纲</a>`:'';
+  document.getElementById('sourceSection').innerHTML=`
+    <div class="section">${exportBtn}<h2>Lesson Source 教案信息${imgs.length?` (${imgs.length} 张图片)`:''}</h2>
+    <div class="source-meta">${meta.map(m=>`<span>${m}</span>`).join('')}</div>
+    ${points}${extracted}${rawText}${thumbs}</div>`;
+}
+
+function renderVerse(){
+  if(!R.memoryVerse)return;
+  document.getElementById('verseSection').innerHTML=`
+    <div class="section"><h2>Memory Verse 背诵经文</h2>
+    <div class="verse-box"><div class="text">${esc(R.memoryVerse.text)}</div><div class="ref">${esc(R.memoryVerse.ref)}</div></div></div>`;
+}
+
+function renderMaster(){
+  if(!R.hasMaster)return;
+  const approved=R.masterApproved;
+  // Multi-character: list all roles from lock.characters_order (main + supporting).
+  // Each maps to master/<roleKey>.png (main role → master-reference.png).
+  const order=(R.lock&&Array.isArray(R.lock.characters_order)&&R.lock.characters_order.length)?R.lock.characters_order:null;
+  const charsMap=(R.lock&&R.lock.characters&&typeof R.lock.characters==='object')?R.lock.characters:null;
+  let imgBlock;
+  if(order&&charsMap){
+    imgBlock=order.map((k,i)=>{
+      const file=i===0?'master-reference.png':`${k}.png`;
+      const name=(charsMap[k]&&charsMap[k].character_name)||k;
+      const role=(charsMap[k]&&charsMap[k].role)||(i===0?'main':'supporting');
+      const roleLabel=role==='main'?'主角':'配角';
+      return `<div style="text-align:center">
+        <img class="master-img" src="/api/runs/${runId}/master/${file}" alt="${esc(name)}" style="width:180px;border-radius:8px;border:1px solid var(--border-subtle)">
+        <div style="font-size:.75rem;margin-top:.3rem"><strong>${esc(name)}</strong> <span style="color:var(--text-muted)">(${roleLabel})</span></div>
+      </div>`;
+    }).join('');
+    imgBlock=`<div style="display:flex;gap:1rem;flex-wrap:wrap">${imgBlock}</div>`;
+  }else{
+    imgBlock=`<img class="master-img" src="/api/runs/${runId}/master/master-reference.png" alt="Master Reference">`;
+  }
+  document.getElementById('masterSection').innerHTML=`
+    <div class="section"><h2>Master Reference 定妆照${order&&order.length>1?` (${order.length} 个角色)`:''}</h2>
+    <div class="master-wrap">
+      ${imgBlock}
+      <div class="master-info">
+        <div class="status-badge ${approved?'green':'amber'}">${approved?'Approved':'Pending Approval'}</div>
+        ${R.lock?`<p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.75rem"><strong>Style:</strong> ${esc(R.lock.style_preset)} &middot; <strong>Aspect:</strong> ${esc(R.lock.aspect)}</p>`:''}
+        ${!approved?`<button class="btn btn-success" onclick="approveMaster()">Approve 定妆照</button>`:''}
+      </div>
+    </div></div>`;
+}
+
+async function approveMaster(){
+  const r=await api('POST','/approve/master');
+  if(r.ok){toast('定妆照已批准');R.masterApproved=true;renderMaster();renderPipeline();}
+  else toast(r.error||'Failed','error');
+}
+
+function renderScenes(){
+  if(!R.sceneImages.length)return;
+  const approved=R.sceneImages.filter(s=>s.approved).length;
+  const total=R.sceneImages.length;
+  document.getElementById('scenesSection').innerHTML=`
+    <div class="section"><h2>Scenes 场景图 (${approved}/${total} approved)</h2>
+    <div class="scene-grid">${R.sceneImages.map(s=>renderSceneCard(s)).join('')}</div></div>`;
+}
+
+function renderSceneCard(s){
+  const statusClass=s.needsRedo?'needs-redo':s.approved?'approved':'';
+  let badge='';
+  if(s.approved)badge='<span class="badge approved">Approved</span>';
+  else if(s.needsRedo)badge='<span class="badge redo">Redo #'+s.redoCount+'</span>';
+  const img=s.imageExists
+    ?`<img src="/api/runs/${runId}/images/scene-${s.nn}.png" alt="${esc(s.title)}" loading="lazy">`
+    :`<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-size:.9rem"><span class="badge missing">未生成</span></div>`;
+  const points=(s.key_points||[]).map(p=>`<li>${esc(p)}</li>`).join('');
+  return`<div class="scene-card ${statusClass}" id="scene-${s.nn}">
+    <div class="img-wrap">${img}
+      <div class="overlay"><span class="badge number">#${s.nn}</span>${badge}</div>
+    </div>
+    <div class="body">
+      <h3>${esc(s.title)}</h3>
+      ${s.key_message?`<div class="key-msg">${esc(s.key_message)}</div>`:''}
+      ${points?`<ul class="points">${points}</ul>`:''}
+      ${s.image_brief?`<div class="brief">Note: ${esc(s.image_brief)}</div>`:''}
+    </div>
+    ${s.imageExists?`<div class="actions">
+      <textarea id="reason-${s.nn}" placeholder="Reject reason (optional)..." rows="2" aria-label="Redo reason for scene ${s.nn}"></textarea>
+      <div class="action-buttons">
+        <button class="btn btn-sm btn-success" onclick="approveScene('${s.nn}')" aria-label="Approve scene ${s.nn}">Approve</button>
+        <button class="btn btn-sm btn-danger" onclick="rejectScene('${s.nn}')" aria-label="Reject scene ${s.nn}">Redo</button>
+      </div>
+    </div>`:''}</div>`;
+}
+
+async function approveScene(nn){
+  const r=await api('POST',`/approve/scene/${nn}`);
+  if(r.ok){
+    toast(`Scene ${nn} approved`);
+    const s=R.sceneImages.find(x=>x.nn===nn);
+    if(s){s.approved=true;s.needsRedo=false;}
+    renderScenes();
+  }else toast(r.error||'Failed','error');
+}
+
+async function rejectScene(nn){
+  const reasonEl=document.getElementById('reason-'+nn);
+  const reason=reasonEl?reasonEl.value:'';
+  const r=await api('POST',`/reject/scene/${nn}`,{reason});
+  if(!r.ok){toast(r.error||'Failed','error');return;}
+  const s=R.sceneImages.find(x=>x.nn===nn);
+  if(s){s.approved=false;s.needsRedo=true;s.redoCount=r.redoCount;}
+  renderScenes();
+  // Actually regenerate the marked scene(s) in the background.
+  const ex=await api('POST','/execute/redo-scenes',{});
+  if(!ex.ok){toast(ex.error||'重画启动失败（可能有其他阶段在运行）','error');return;}
+  toast(`Scene ${nn} 重画中（约1-3分钟），完成后自动刷新...`);
+  pollRedo(nn);
+}
+
+function pollRedo(nn){
+  const timer=setInterval(async()=>{
+    const d=await(await fetch(`/api/runs/${runId}`)).json();
+    const s=(d.sceneImages||[]).find(x=>x.nn===nn);
+    if(s&&!s.needsRedo){
+      clearInterval(timer);
+      R=d;renderScenes();renderPipeline();
+      toast(`Scene ${nn} 重画完成 ✓`);
+    }
+  },8000);
+  setTimeout(()=>clearInterval(timer),600000);
+}
+
+function renderCraft(){
+  if(!R.craft)return;
+  const c=R.craft;
+  const mats=(c.materials||[]).map(m=>`<span>${esc(m)}</span>`).join('');
+  const steps=(c.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('');
+  document.getElementById('craftSection').innerHTML=`
+    <div class="section"><h2>Craft 手工活动 — ${esc(c.title)} (${c.duration_min||''}min)</h2>
+    ${mats?`<div class="craft-materials">${mats}</div>`:''}
+    <ol class="craft-list">${steps}</ol>
+    ${c.relation_to_story?`<p style="font-size:.82rem;color:var(--text-muted);margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border-subtle)">Link: ${esc(c.relation_to_story)}</p>`:''}</div>`;
+}
+
+function renderSlides(){
+  if(!R.slides.length)return;
+  document.getElementById('slidesSection').innerHTML=`
+    <div class="section"><h2>Slides 幻灯片 (${R.slideCount})</h2>
+    <div class="slides-grid">${R.slides.map((sl,i)=>`<div class="slide-thumb" tabindex="0" onclick="openSlide('${sl}')" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();openSlide('${sl}')}" role="button" aria-label="Open slide ${i}">
+      <div class="preview">Slide ${i}</div>
+      <div class="label">${sl}</div>
+    </div>`).join('')}</div></div>`;
+}
+
+function openSlide(name){window.open(`/api/runs/${runId}/slides/${name}`,'_blank');}
+
+function renderActions(){
+  let html='';
+  if(R.slideCount)html+=`<a href="/run/${runId}/preview" class="btn btn-accent">▶ Preview PPTX</a>`;
+  if(R.hasPptx)html+=`<a href="/api/runs/${runId}/pptx" class="btn btn-primary">⬇ Download PPTX</a>`;
+  html+=`<a href="/run/${runId}/execute" class="btn btn-outline">⚡ Execute Phases</a>`;
+  document.getElementById('bottomActions').innerHTML=html;
+}
+
+load();
+</script>
+</body>
+</html>
