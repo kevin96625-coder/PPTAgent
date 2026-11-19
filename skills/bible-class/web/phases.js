@@ -43,6 +43,14 @@ function readRunMeta(rd) {
   try { return JSON.parse(fs.readFileSync(path.join(rd, 'run-meta.json'), 'utf8')); } catch { return {}; }
 }
 
+// Selectable image-generation models (image-gen registry). Empty string means
+// "no explicit choice" → generate.js falls back to its historical default.
+const IMAGE_MODEL_IDS = ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst', 'gemini-3.1-flash-image'];
+function resolveImageModel(opts, rd) {
+  const m = (opts && opts.imageModel) || readRunMeta(rd).imageModel || '';
+  return IMAGE_MODEL_IDS.includes(m) ? m : '';
+}
+
 function getRunDir(runId) {
   return path.join(PPT_AGENT_ROOT, 'openspec', 'changes', runId);
 }
@@ -243,6 +251,9 @@ const phases = {
       const outline = JSON.parse(fs.readFileSync(path.join(rd, 'lesson-outline.json'), 'utf8'));
       const lock = JSON.parse(fs.readFileSync(path.join(rd, 'style.lock.json'), 'utf8'));
       const script = path.join(PPT_AGENT_ROOT, 'skills', 'image-gen', 'scripts', 'generate.js');
+      const imageModel = resolveImageModel(opts, rd);
+      if (imageModel) onLine('info', `Image model: ${imageModel}`);
+      const modelFlags = imageModel ? ['--model', imageModel] : [];
       const portraitClause = 'STRICTLY NEUTRAL calm expression (no smile, no emotion), relaxed natural standing pose, front-facing, arms at sides, plain simple background, clear full-body view. This image is an identity/costume reference sheet for later illustrations, not a story scene.\nAspect: 4:3';
 
       // Determine the set of characters to render. Multi-character path uses
@@ -269,13 +280,28 @@ const phases = {
           const idFile = i === 0
             ? path.join(rd, 'style.lock.identity.txt')
             : path.join(rd, `style.lock.identity.${roleKey}.txt`);
-          const briefText = `${identityBlock}\n\n${lock.style_block}\n\nScene: ${outline.title} - ${entry.character_name || roleKey} character reference portrait. ${portraitClause}`;
+          const outPath = path.join(masterDir, outName);
+          // Skip regeneration when the master already exists (unless forced) — keeps
+          // approved masters and saves cost when adding a NEW character to an existing run.
+          if (fs.existsSync(outPath) && !opts.forceMaster) {
+            onLine('info', `master/${outName} already exists — skip (delete it or pass forceMaster to redo)`);
+            files.push(`master/${outName}`);
+            continue;
+          }
+          // Group characters (e.g. ten lepers) get a GROUP reference sheet instead of
+          // a single portrait, so the same people recur across scenes.
+          const isGroup = entry.reference_kind === 'group';
+          const groupClause = isGroup
+            ? `GROUP character reference sheet: exactly ${entry.group_size || 'the story\'s'} people standing together in a loose row, all with calm NEUTRAL expressions, full-body view, plain simple background. These SAME people must look IDENTICAL (same faces, hair, clothing colors) whenever they reappear in later story scenes. This is a reference sheet, not a story scene.\nAspect: 4:3`
+            : portraitClause;
+          const briefText = `${identityBlock}\n\n${lock.style_block}\n\nScene: ${outline.title} - ${entry.character_name || roleKey} ${isGroup ? 'group reference' : 'character reference portrait'}. ${groupClause}`;
           const briefFile = path.join(briefsDir, briefName);
           fs.writeFileSync(briefFile, briefText);
-          onLine('info', `Wrote master brief for ${entry.character_name || roleKey} (${roleKey})`);
+          onLine('info', `Wrote master brief for ${entry.character_name || roleKey} (${roleKey}${isGroup ? ', group' : ''})`);
           await spawnLog('node', [
             script, '--run-dir', rd, '--label', label,
-            '--out', path.join(masterDir, outName),
+            ...modelFlags,
+            '--out', outPath,
             '--prompt-file', briefFile,
             '--identity-file', idFile,
             '--style-file', path.join(rd, 'style.lock.style.txt'),
@@ -289,6 +315,7 @@ const phases = {
         onLine('info', 'Wrote master brief');
         await spawnLog('node', [
           script, '--run-dir', rd, '--label', 'master',
+          ...modelFlags,
           '--out', path.join(masterDir, 'master-reference.png'),
           '--prompt-file', path.join(briefsDir, 'master.txt'),
           '--identity-file', path.join(rd, 'style.lock.identity.txt'),
@@ -312,6 +339,8 @@ const phases = {
       if (!fs.existsSync(briefsDir)) fs.mkdirSync(briefsDir, { recursive: true });
       const imagesDir = path.join(rd, 'images');
       if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
+      const imageModel = resolveImageModel(opts, rd);
+      if (imageModel) onLine('info', `Image model: ${imageModel}`);
 
       // Multi-character support: build the per-role master png path map from
       // style.lock.json. The main protagonist maps to master-reference.png; each
@@ -335,40 +364,57 @@ const phases = {
       // `characters` array. Falls back to main protagonist only when no characters
       // list is present (backward compat) or the list is empty.
       function resolveReferences(scene) {
-        if (!multiChar) return [mainMaster];
+        if (!multiChar) return { refs: [mainMaster], roles: [] };
         const list = Array.isArray(scene.characters) ? scene.characters : [];
         const refs = [];
+        const roles = [];
         for (const roleKey of list) {
           const p = masterPathByRole[roleKey];
-          if (p && fs.existsSync(p)) refs.push(p);
+          if (p && fs.existsSync(p)) { refs.push(p); roles.push(roleKey); }
         }
         // Always include the main protagonist as a fallback when no role matched.
-        if (refs.length === 0 && fs.existsSync(mainMaster)) refs.push(mainMaster);
-        return refs;
+        if (refs.length === 0 && fs.existsSync(mainMaster)) {
+          refs.push(mainMaster);
+          roles.push(order[0]);
+        }
+        return { refs, roles };
       }
 
       // The reference image is an identity sheet only — scenes must re-pose
       // and re-stage the character(s) so they blend naturally into each picture.
-      const REF_RULES = multiChar
-        ? `Reference usage rules:
-- Multiple reference images may be attached — EACH ONE defines ONE character (its facial features, hairstyle, beard and clothing). Keep each character consistent across scenes.
-- Each reference corresponds to a role: ${order.map((k) => `${charsMap[k] && charsMap[k].character_name || k} = image ${order.indexOf(k) + 1}`).join('; ')}.
-- Only draw the characters called for by this scene's image_brief; do not force every attached character into the scene.
-- Do NOT copy any reference image's pose, expression, camera angle, framing, lighting or background.
-- EXPRESSION: ignore the reference images' expressions entirely. Each character's expression MUST match this scene's emotional tone — solemn scenes need serious/worried faces, joyful scenes need happy faces.
-- SCALE: every character must be drawn at the same realistic human scale — same head-to-body ratio and consistent perspective. Do NOT enlarge the main character; use placement and composition instead.`
-        : `Reference usage rules:
+      // Built PER SCENE so image numbering matches the actually-attached references
+      // and group characters (e.g. ten lepers) are described correctly.
+      const SINGLE_REF_RULES = `Reference usage rules:
 - The attached reference image defines ONLY the character's facial features, hairstyle, beard and clothing/costume. Keep these consistent.
 - Do NOT copy the reference image's pose, expression, camera angle, framing, lighting or background.
 - EXPRESSION: ignore the reference image's expression entirely (even if it smiles). The character's expression MUST match this scene's emotional tone — solemn scenes need serious/worried faces, joyful scenes need happy faces. Never default to a smile.
 - SCALE: the main character must be drawn at the same realistic human scale as every other person in the scene — same head-to-body ratio and consistent perspective with the crowd. Do NOT enlarge the main character to make them prominent; use placement and composition instead.
 - The character must blend naturally into the scene's composition, scale and lighting — never look pasted-in or stiffly front-facing unless the scene calls for it.`;
 
+      function refRulesFor(roles) {
+        if (!multiChar || roles.length === 0) return SINGLE_REF_RULES;
+        const listing = roles.map((roleKey, idx) => {
+          const entry = charsMap[roleKey] || {};
+          const name = entry.character_name || roleKey;
+          return entry.reference_kind === 'group'
+            ? `image ${idx + 1} = ${name} — the WHOLE GROUP of ${entry.group_size || 'the same'} people; every member's face and clothing must match and recur identically in other scenes`
+            : `image ${idx + 1} = ${name}`;
+        }).join('; ');
+        return `Reference usage rules:
+- Multiple reference images are attached — EACH ONE is an identity sheet defining ONE character or ONE character GROUP (facial features, hairstyle, beard, clothing). Keep each consistent across scenes.
+- Correspondence: ${listing}.
+- Only draw the characters/groups called for by this scene's image_brief; do not force every attached reference into the scene.
+- Do NOT copy any reference image's pose, expression, camera angle, framing, lighting or background.
+- EXPRESSION: ignore the reference images' expressions entirely. Each character's expression MUST match this scene's emotional tone — solemn scenes need serious/worried faces, joyful scenes need happy faces.
+- STATE CHANGES (e.g. sick → healed): keep the SAME people (same faces, hair, clothing) and only change what the scene's image_brief specifies (e.g. skin healed, white patches gone).
+- SCALE: every character must be drawn at the same realistic human scale — same head-to-body ratio and consistent perspective. Do NOT enlarge the main character; use placement and composition instead.`;
+      }
+
       const jobs = [];
       for (const s of scenes) {
         const nn = String(s.index).padStart(2, '0');
-        const refs = resolveReferences(s);
-        const briefText = `${fs.readFileSync(path.join(rd, 'style.lock.identity.txt'), 'utf8')}\n\n${fs.readFileSync(path.join(rd, 'style.lock.style.txt'), 'utf8')}\n\n${REF_RULES}\n\nScene ${nn}: ${s.title}\n${s.image_brief}\nAspect: 4:3`;
+        const { refs, roles } = resolveReferences(s);
+        const briefText = `${fs.readFileSync(path.join(rd, 'style.lock.identity.txt'), 'utf8')}\n\n${fs.readFileSync(path.join(rd, 'style.lock.style.txt'), 'utf8')}\n\n${refRulesFor(roles)}\n\nScene ${nn}: ${s.title}\n${s.image_brief}\nAspect: 4:3`;
         const briefFile = path.join(briefsDir, `scene-${nn}.txt`);
         fs.writeFileSync(briefFile, briefText);
         const job = {
@@ -379,7 +425,9 @@ const phases = {
           identityFile: path.join(rd, 'style.lock.identity.txt'),
           styleFile: path.join(rd, 'style.lock.style.txt'),
           references: refs,            // plural array; generate.js accepts this directly
-          backend: 'openai-fetch',
+          // No backend pin — generate.js routes by model (gemini models must
+          // not hit the OpenAI endpoint); unset model keeps the openai-fetch default.
+          model: imageModel || undefined,
         };
         jobs.push(job);
       }
@@ -407,6 +455,8 @@ const phases = {
       onLine('info', `重画 ${redoKeys.length} 个场景: ${redoKeys.join(', ')}`);
 
       const script = path.join(PPT_AGENT_ROOT, 'skills', 'image-gen', 'scripts', 'generate.js');
+      const imageModel = resolveImageModel(opts, rd);
+      const modelFlags = imageModel ? ['--model', imageModel] : [];
       const files = [];
       for (const key of redoKeys) {
         const nn = key.slice('scene-'.length);
@@ -442,6 +492,7 @@ const phases = {
           '--run-dir', rd,
           '--label', key,
           '--redo',
+          ...modelFlags,
           '--out', path.join(rd, 'images', `scene-${nn}.png`),
           '--prompt-file', briefFile,
           '--identity-file', path.join(rd, 'style.lock.identity.txt'),
@@ -715,11 +766,11 @@ Remember: output ONLY the JSON object, nothing else.`;
 // Single-shot text generation (no agentic file-writing loop — much faster).
 async function runCodexText(prompt, cwd, onLine, runId) {
   const outputFile = path.join(os.tmpdir(), `codex-outline-${Date.now()}.txt`);
-  onLine('info', `$ codex exec -m gpt-5.5 (single-shot)`);
+  onLine('info', `$ codex exec -m gpt-6.1-sol (single-shot)`);
   await spawnLog('codex', [
     'exec',
-    '-m', 'gpt-5.5',
-    '-c', 'model_reasoning_effort=medium',
+    '-m', 'gpt-6.1-sol',
+    '-c', 'model_reasoning_effort=high',
     '-c', 'mcp_servers={}',
     '--dangerously-bypass-approvals-and-sandbox',
     '--color', 'never',
@@ -734,12 +785,16 @@ async function runCodexText(prompt, cwd, onLine, runId) {
   throw new Error('codex produced no output');
 }
 
+// The google `gemini` CLI is retired for individual accounts (IneligibleTierError,
+// 2026-09) — Google's migration target is the Antigravity `agy` CLI, which keeps
+// the same -p headless + @file image-reference pattern.
+// NOTE: --model must precede -p (agy errors out when -p swallows the next flag).
 function runGeminiText(prompt, cwd, onLine, runId) {
-  onLine('info', `$ gemini -p (single-shot)`);
-  return spawnLog('gemini', [
+  onLine('info', `$ agy -m gemini-3.8-flash-high -p (single-shot)`);
+  return spawnLog('agy', [
+    '--model', 'gemini-3.8-flash-high',
+    '--dangerously-skip-permissions',
     '-p', prompt,
-    '--approval-mode', 'plan',
-    '--skip-trust',
   ], { cwd, _runId: runId }, onLine).then((stdout) =>
     stdout.split('\n').filter((l) => !/^(YOLO mode|Ripgrep is not available)/.test(l)).join('\n')
   );
@@ -824,12 +879,12 @@ Extract and output ONLY a JSON object with these fields:
 Output valid JSON only.`;
 
   const outputFile = path.join(path.dirname(path.dirname(imagePaths[0])), 'vision-codex-output.txt');
-  onLine('info', `$ codex exec -m gpt-5.5`);
+  onLine('info', `$ codex exec -m gpt-6.1-sol`);
   const args = [
     'exec',
     ...imgFlags,
-    '-m', 'gpt-5.5',
-    '-c', 'model_reasoning_effort=medium',
+    '-m', 'gpt-6.1-sol',
+    '-c', 'model_reasoning_effort=high',
     '-c', 'mcp_servers={}',
     '--dangerously-bypass-approvals-and-sandbox',
     '--color', 'never',
@@ -863,18 +918,19 @@ After reading ALL images, extract and output ONLY a JSON object:
 
 Output valid JSON only.`;
 
-  onLine('info', `$ gemini -p (${imagePaths.length} images via @file refs)`);
-  const args = ['-p', prompt, '--approval-mode', 'yolo', '--skip-trust'];
+  onLine('info', `$ agy -m gemini-3.8-flash-high (${imagePaths.length} images via @file refs)`);
+  // Headless file reads need tool permissions auto-approved (read-only prompt).
+  const args = ['--model', 'gemini-3.8-flash-high', '--dangerously-skip-permissions', '-p', prompt];
   let stdout = '';
   await new Promise((resolve, reject) => {
-    const child = spawn('gemini', args, {
+    const child = spawn('agy', args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       cwd: imgDir,
     });
     trackChild(opts._runId, child);
     child.stdout.on('data', (d) => { const s = d.toString(); stdout += s; s.split('\n').filter(Boolean).forEach((l) => onLine('out', l)); });
     child.stderr.on('data', (d) => { d.toString().split('\n').filter(Boolean).forEach((l) => onLine('err', l)); });
-    child.on('close', (code) => { code === 0 ? resolve() : reject(new Error(`gemini exit ${code}`)); });
+    child.on('close', (code) => { code === 0 ? resolve() : reject(new Error(`agy exit ${code}`)); });
     child.on('error', reject);
   });
   // Strip CLI banner lines (e.g. "YOLO mode is enabled...") before the JSON payload.

@@ -15,6 +15,28 @@ const SIZES = {
 
 const DEFAULT_MODEL = 'gpt-image-2';
 
+// ── image model registry (2026-09) ──────────────────────────────────────────
+// Subscription-first routing, matching FEASIBILITY_SUBSCRIPTION_AUTH.md:
+//   GPT image models    → codex CLI's built-in image_gen tool (ChatGPT sub, $0)
+//   Gemini image models → agy (Antigravity) CLI's built-in image tool (Google sub, $0)
+// Metered HTTP backends (openai-fetch / gemini-fetch) remain available when
+// pinned explicitly via --backend.
+const IMAGE_MODELS = {
+  'gpt-image-2': { backend: 'codex-cli', label: 'GPT Image 2' },
+  'gpt-image-2.5-flare': { backend: 'codex-cli', label: 'GPT Image 2.5 Flare' },
+  'gpt-image-2.5-sunburst': { backend: 'codex-cli', label: 'GPT Image 2.5 Sunburst' },
+  'gemini-3.1-flash-image': { backend: 'agy-cli', label: 'Gemini 3.1 Flash Image' },
+};
+
+function resolveBackendForModel(model) {
+  if (!model) return null;
+  const entry = IMAGE_MODELS[model];
+  if (entry) return entry.backend;
+  if (/^(gemini|nano-banana)/.test(model)) return 'agy-cli';
+  if (/^gpt-image/.test(model)) return 'codex-cli';
+  return null;
+}
+
 // ── URL normalization (from StoryForge verified pattern) ────────────────────
 // Input may be https://host or https://host/v1 — strip /v1 suffix first,
 // then always append /v1/images/... to avoid /v1/v1/... duplication.
@@ -199,6 +221,116 @@ function buildCodexInstruction({ fullPrompt, references, outPath }) {
   );
 }
 
+// ── agy-cli backend (Antigravity CLI, Google subscription) ──────────────────
+// Same instruction-driven pattern as codex-cli: the CLI's built-in image tool
+// generates and writes the file. Reference images are attached via @file paths
+// inside the prompt text (absolute paths verified working). --model pins the
+// driver text model that runs the agent loop; the image model itself is the
+// backend's built-in (gemini-3.1-flash-image).
+
+const AGY_DRIVER_MODEL = 'gemini-3.8-flash-high';
+
+function buildAgyArgs() {
+  // NOTE: --model must precede -p (agy errors when -p swallows the next flag).
+  return ['--model', AGY_DRIVER_MODEL, '--dangerously-skip-permissions'];
+}
+
+function buildAgyInstruction({ fullPrompt, references, outPath }) {
+  const refNote = references && references.length
+    ? `Reference image(s) to read first: ${references.map((r) => `@${r}`).join(' ')}. `
+      + 'They define the main character(s) — keep them visually identical (face, hair, clothing, art style). '
+    : '';
+  return (
+    `Generate ONE image using your built-in image generation capability and save the file exactly to "${outPath}". `
+    + refNote
+    + 'Do not create, modify, or delete any other files. After saving, reply with just: DONE\n\n'
+    + `Image prompt:\n${fullPrompt}`
+  );
+}
+
+// ── gemini-fetch backend (direct generativelanguage REST) ───────────────────
+// One endpoint covers all three flows:
+//   text-to-image  — text prompt only
+//   image-to-image / edit — reference images as inline_data parts + prompt
+// Requires GEMINI_API_KEY (or GOOGLE_API_KEY) in env or skills/image-gen/.env.
+
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+const GEMINI_DEFAULT_MODEL = 'gemini-3.1-flash-image';
+const GEMINI_ASPECTS = new Set(['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9']);
+
+function resolveGeminiKey(env) {
+  // Explicit env key (even empty string) disables the .env fallback, so tests
+  // can force the no-key path regardless of the machine's stored credentials.
+  const fromEnv = (k) => (env && Object.prototype.hasOwnProperty.call(env, k))
+    ? env[k] : (process.env[k] || getCredential(k));
+  return fromEnv('GEMINI_API_KEY') || fromEnv('GOOGLE_API_KEY') || '';
+}
+
+function guessMime(file) {
+  const ext = path.extname(file).toLowerCase();
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.webp') return 'image/webp';
+  return 'image/png';
+}
+
+function buildGeminiBody(opts) {
+  const parts = [{ text: opts.fullPrompt }];
+  for (const ref of opts.references || []) {
+    if (!fs.existsSync(ref)) continue;
+    parts.push({
+      inline_data: { mime_type: guessMime(ref), data: fs.readFileSync(ref).toString('base64') },
+    });
+  }
+  const generationConfig = { responseModalities: ['TEXT', 'IMAGE'] };
+  if (GEMINI_ASPECTS.has(opts.aspect)) generationConfig.imageConfig = { aspectRatio: opts.aspect };
+  return {
+    model: opts.model || GEMINI_DEFAULT_MODEL,
+    url: `${GEMINI_API_BASE}/models/${encodeURIComponent(opts.model || GEMINI_DEFAULT_MODEL)}:generateContent`,
+    body: { contents: [{ role: 'user', parts }], generationConfig },
+  };
+}
+
+// Response candidates use camelCase inlineData over REST but some gateways echo
+// the snake_case proto spelling — accept both.
+function extractGeminiB64(payload) {
+  for (const cand of payload.candidates || []) {
+    for (const part of (cand.content && cand.content.parts) || []) {
+      const inline = part.inlineData || part.inline_data;
+      if (inline && typeof inline.data === 'string' && inline.data.length > 100) return inline.data;
+    }
+  }
+  return null;
+}
+
+async function dispatchGeminiFetch(opts, env) {
+  const apiKey = resolveGeminiKey(env);
+  if (!apiKey) {
+    throw new Error(
+      'gemini-fetch: GEMINI_API_KEY not configured (set it in skills/image-gen/.env — '
+      + 'free-tier key from aistudio.google.com works for gemini image models)',
+    );
+  }
+  const { url, body } = buildGeminiBody(opts);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const status = res.status;
+    const text = await res.text().catch(() => '');
+    throw new Error(`gemini-fetch generateContent ${status}: ${text.slice(0, 300)}`);
+  }
+  const json = await res.json();
+  const b64 = extractGeminiB64(json);
+  if (!b64) {
+    const block = json.promptFeedback && json.promptFeedback.blockReason;
+    throw new Error(`gemini-fetch: no image data in response${block ? ` (blocked: ${block})` : ''}`);
+  }
+  saveB64(b64, opts.outPath);
+  return { imagePath: opts.outPath, meta: { backend: 'gemini-fetch', model: body.model } };
+}
+
 function buildGeminiArgs({ fullPrompt, references, outPath, model }) {
   const args = ['--model', model || 'nano-banana-2', '--out', outPath];
   for (const ref of references || []) args.push('--reference', ref);
@@ -231,7 +363,20 @@ async function dispatch(opts) {
     if (!res || res.code !== 0) {
       throw new Error(`codex-cli failed (code ${res && res.code}): ${res && res.stderr}`);
     }
-    return { imagePath: outPath, meta: { backend, model: 'gpt-image-2' } };
+    return { imagePath: outPath, meta: { backend, model: opts.model || 'gpt-image-2' } };
+  }
+
+  if (backend === 'agy-cli') {
+    const args = buildAgyArgs();
+    const input = buildAgyInstruction({ fullPrompt, references, outPath });
+    const res = await runner({ cmd: 'agy', args, env, input });
+    if (!res || res.code !== 0) {
+      throw new Error(`agy-cli failed (code ${res && res.code}): ${res && res.stderr}`);
+    }
+    if (!fs.existsSync(outPath)) {
+      throw new Error(`agy-cli exited 0 but did not write "${outPath}"`);
+    }
+    return { imagePath: outPath, meta: { backend, model: opts.model || 'gemini-3.1-flash-image' } };
   }
 
   if (backend === 'gemini-api') {
@@ -240,6 +385,10 @@ async function dispatch(opts) {
     const res = await runner({ cmd: 'image-gen-gemini', args, env });
     if (!res || res.code !== 0) throw new Error(`gemini-api failed (code ${res && res.code}): ${res && res.stderr}`);
     return { imagePath: outPath, meta: { backend, model } };
+  }
+
+  if (backend === 'gemini-fetch') {
+    return dispatchGeminiFetch(opts, env);
   }
 
   if (backend === 'openai-api') {
@@ -271,4 +420,8 @@ function defaultRunner(spec) {
   });
 }
 
-module.exports = { dispatch, defaultRunner, buildCodexArgs, buildCodexInstruction, buildGeminiArgs, buildOpenaiArgs, normalizeBaseUrl, extractB64, SIZES };
+module.exports = {
+  dispatch, defaultRunner, buildCodexArgs, buildCodexInstruction, buildGeminiArgs, buildOpenaiArgs,
+  normalizeBaseUrl, extractB64, SIZES, IMAGE_MODELS, resolveBackendForModel, buildGeminiBody,
+  extractGeminiB64, buildAgyArgs, buildAgyInstruction, AGY_DRIVER_MODEL,
+};

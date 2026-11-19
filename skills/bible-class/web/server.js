@@ -265,6 +265,7 @@ function getRunDetail(runId) {
   return {
     id: safe,
     model: runMeta.model || null,
+    imageModel: runMeta.imageModel || null,
     source,
     inputImages,
     title: (outline && outline.title) || safe,
@@ -428,8 +429,8 @@ addRoute('POST', 'api/runs', async (req, res) => {
   }
   writeJSON(path.join(dir, 'lesson-source.json'), source);
 
-  if (body.model) {
-    writeJSON(path.join(dir, 'run-meta.json'), { model: body.model });
+  if (body.model || body.imageModel) {
+    writeJSON(path.join(dir, 'run-meta.json'), { model: body.model, imageModel: body.imageModel });
   }
 
   sendJSON(res, 200, {

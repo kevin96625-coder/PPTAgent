@@ -55,8 +55,10 @@ teacher approval before any images are generated.
   },
   "characters": {
     "<role_key>": {
-      "character_name": "string (角色姓名，如 耶稣/盲人/撒该)",
+      "character_name": "string (角色姓名，如 耶稣/盲人/撒该；群体角色如 十位麻風病人)",
       "role": "string (main=第一主角 | supporting=重要配角)",
+      "reference_kind": "string (可选: group=群体角色，生成一张群体合影定妆照)",
+      "group_size": "number (可选: 群体人数，如 10)",
       "age_appearance": "string",
       "ethnicity": "string",
       "hair_description": "string",
@@ -65,7 +67,7 @@ teacher approval before any images are generated.
     }
   },
   "characters_order": ["<role_key>", "..."],
-  "note: characters": "由 content-core 识别第一主角 + 跨≥2场出现且有动作/对话的重要配角(如盲人、撒该、拉撒路)。每个角色一套完整档案。匿名人群(门徒、群众、小朋友)不进 characters，留在 image_brief 自由发挥。character_profile 是 characters 第一主角项的快照，向后兼容。",
+  "note: characters": "由 content-core 识别第一主角 + 跨≥2场出现且有动作/对话的重要配角(如盲人、撒该、拉撒路)。跨≥2场出现的确定群体(如路加福音17的十個麻瘋病人)作为一个 group 角色条目(reference_kind=group)，生成群体合影定妆照以保证跨场景同一群人。匿名人群(门徒、群众、小朋友)不进 characters，留在 image_brief 自由发挥。character_profile 是 characters 第一主角项的快照，向后兼容。",
   "teaching": {
     "duration_min": 15,
     "scenes": [

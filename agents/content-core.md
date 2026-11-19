@@ -122,6 +122,20 @@ Handle content authoring: structured outline creation using Pyramid Principle an
        `zacchaeus`, `lazarus`) and reuse it consistently in every scene's `characters`
        array. The protagonist's `role_key` is always the first entry (e.g. `jesus`,
        `moses`, `david`).
+     - **Recurring GROUP exception (群体角色).** A story may center on a DEFINITE,
+       countable group that recurs across ≥2 scenes as the same people — most famously
+       the ten lepers (Luke 17:11-19, 十個麻瘋病人) or the ten virgins (Matt 25). Such a
+       group is NOT an anonymous crowd: the story is ABOUT them and they must look
+       IDENTICAL across scenes. When the same definite group appears in ≥2 scenes, add
+       ONE group entry to `characters` with `"reference_kind": "group"` plus
+       `"group_size": N` and the same 6 profile fields (describing the members
+       collectively, e.g. "十位中年男子，穿破舊粗布長袍"). Use a plural role_key
+       (e.g. `leper_group`, `ten_virgins`). List this group key in every scene where the
+       group appears. If one member later appears ALONE (e.g. the thankful leper by
+       himself), ALSO create an individual entry for that person and use the individual
+       key in those scenes — but keep the individual's appearance matching his look in
+       the group (same clothing/age description). Anonymous crowds (門徒, 群眾, 小朋友)
+       still NEVER get a profile.
      - Generate `lesson-outline.json` with the following exact structure:
        - `title`: lesson title from lesson-source.json.
        - `approved`: always set to `false` (the lead orchestrator sets it to `true` after
@@ -138,7 +152,9 @@ Handle content authoring: structured outline creation using Pyramid Principle an
        - `characters`: a map of role_key → profile object for ALL characters that need a
          master reference (protagonist + important supporting characters). Each value has
          7 keys: `character_name`, `role` ("main" for protagonist, "supporting" for others),
-         `age_appearance`, `ethnicity`, `hair_description`, `clothing`, `palette`. The
+         `age_appearance`, `ethnicity`, `hair_description`, `clothing`, `palette`. A
+         recurring group entry (see "Recurring GROUP exception") additionally carries
+         `"reference_kind": "group"` and `"group_size": N`. The
          protagonist MUST be included with role="main". If no supporting characters, the
          map contains only the protagonist. May be null only if protagonist is unknown.
        - `characters_order`: an array of role_keys in display/processing order, with the

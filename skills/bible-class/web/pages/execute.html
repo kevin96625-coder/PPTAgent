@@ -242,6 +242,12 @@
           <option value="3" selected>3</option>
         </select>
       </div>
+      <div class="form-group">
+        <label for="optImageModel">Image Model（作用于「生成定妆照 / 批量生成场景图 / 重画」阶段）</label>
+        <select id="optImageModel">
+          <option value="">跟随 Run 设置</option>
+        </select>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group" style="flex:2">
@@ -277,7 +283,12 @@
 <script>
 const runId=location.pathname.split('/')[2];
 let phaseData=[];let activePhase=null;let logOpen=false;let runModel=null;
-const MODEL_LABELS={gpt:'GPT-5.5',claude:'Claude Opus 4.8',gemini:'Gemini Pro'};
+const MODEL_LABELS={gpt:'GPT-6.1 Sol',claude:'Claude Opus 4.8',gemini:'Gemini 3.8 Flash'};
+const IMAGE_MODEL_OPTIONS={
+  'gpt-image-2.5-flare':'GPT Image 2.5 Flare (OpenAI)',
+  'gpt-image-2.5-sunburst':'GPT Image 2.5 Sunburst (OpenAI)',
+  'gemini-3.1-flash-image':'Gemini 3.1 Flash Image (Google)'
+};
 
 async function load(){
   const [runInfo,phases]=await Promise.all([
@@ -285,6 +296,9 @@ async function load(){
     fetch(`/api/runs/${runId}/phases`).then(r=>r.json()),
   ]);
   runModel=runInfo.model||null;
+  const imSel=document.getElementById('optImageModel');
+  imSel.innerHTML='<option value="">跟随 Run 设置'+(runInfo.imageModel?`（${IMAGE_MODEL_OPTIONS[runInfo.imageModel]||runInfo.imageModel}）`:'（默认 GPT Image）')+'</option>'
+    +Object.entries(IMAGE_MODEL_OPTIONS).map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
   document.getElementById('topTitle').textContent=runInfo.title||runId;
   document.getElementById('backLink').href=`/run/${runId}`;
   phaseData=phases.phases||[];
@@ -453,6 +467,8 @@ function execPhase(key){
     const opts={};
     opts.preset=document.getElementById('optPreset').value;
     opts.concurrency=parseInt(document.getElementById('optConcurrency').value,10);
+    const imOverride=document.getElementById('optImageModel').value;
+    if(imOverride)opts.imageModel=imOverride;
     if(key==='generate-outline'&&pendingFeedback){opts.feedback=pendingFeedback;pendingFeedback='';}
     const charDesc=document.getElementById('optCharDesc').value.trim();
     if(charDesc){

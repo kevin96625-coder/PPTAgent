@@ -158,7 +158,7 @@ function writeMultiCharStyleLock(runDir, { preset, presetYaml, characters, chara
   const idPath = path.join(runDir, 'style.lock.identity.txt');
   const stylePath = path.join(runDir, 'style.lock.style.txt');
 
-  // characters field: roleKey → {role, character_name, identity_block}
+  // characters field: roleKey → {role, character_name, identity_block, reference_kind?, group_size?}
   const charactersField = {};
   for (const roleKey of charactersOrder) {
     charactersField[roleKey] = {
@@ -166,6 +166,9 @@ function writeMultiCharStyleLock(runDir, { preset, presetYaml, characters, chara
       character_name: characters[roleKey].character_name,
       identity_block: identityByRole[roleKey],
     };
+    // Pass through group-reference metadata (recurring definite group, e.g. ten lepers).
+    if (characters[roleKey].reference_kind) charactersField[roleKey].reference_kind = characters[roleKey].reference_kind;
+    if (characters[roleKey].group_size) charactersField[roleKey].group_size = characters[roleKey].group_size;
   }
 
   const jsonContent = {

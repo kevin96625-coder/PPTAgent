@@ -7,12 +7,36 @@ const { parseArgs, run } = require('../scripts/generate');
 
 function tmpRun() { return fs.mkdtempSync(path.join(os.tmpdir(), 'gen-')); }
 
-test('parseArgs defaults backend to openai-fetch and splits references', () => {
+test('parseArgs leaves backend unset by default and splits references', () => {
   const a = parseArgs(['--run-dir', '/r', '--label', 'scene-01', '--out', '/o.png',
     '--prompt', 'hi', '--reference', '/a.png,/b.png']);
-  assert.strictEqual(a.backend, 'openai-fetch');
+  assert.strictEqual(a.backend, null);
   assert.deepStrictEqual(a.references, ['/a.png', '/b.png']);
   assert.strictEqual(a.label, 'scene-01');
+});
+
+test('run routes gemini image models to the agy subscription backend', async () => {
+  const dir = tmpRun();
+  const out = await run({
+    runDir: dir, label: 'scene-g', out: path.join(dir, 'o.png'),
+    prompt: 'a lamb', model: 'gemini-3.1-flash-image', estimateOnly: true,
+  }, { runner: async () => ({ code: 0 }), env: {} });
+  assert.strictEqual(out.estimate.estUsdTotal, 0);
+  assert.match(out.estimate.quotaNote, /agy/);
+  assert.strictEqual(out.estimate.model, 'gemini-3.1-flash-image');
+});
+
+test('run estimates fine for gpt-image-2.5 tiers via codex routing', async () => {
+  const dir = tmpRun();
+  for (const m of ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst']) {
+    const out = await run({
+      runDir: dir, label: `scene-${m}`, out: path.join(dir, 'o.png'),
+      prompt: 'a lamb', model: m, estimateOnly: true,
+    }, { runner: async () => ({ code: 0 }), env: {} });
+    assert.strictEqual(out.estimate.model, m);
+    assert.strictEqual(out.estimate.estUsdTotal, 0);
+    assert.match(out.estimate.quotaNote, /ChatGPT subscription/);
+  }
 });
 
 test('run with --estimate-only returns estimate and writes nothing', async () => {

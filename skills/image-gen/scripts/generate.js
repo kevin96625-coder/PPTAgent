@@ -5,11 +5,11 @@ const crypto = require('node:crypto');
 const { assembleFullPrompt } = require('./lib/prompt');
 const { estimate } = require('./lib/cost');
 const manifest = require('./lib/manifest');
-const { dispatch, defaultRunner } = require('./lib/backends');
+const { dispatch, defaultRunner, resolveBackendForModel } = require('./lib/backends');
 
 function parseArgs(argv) {
   const a = {
-    backend: 'openai-fetch', references: [], aspect: '4:3', seed: null,
+    backend: null, references: [], aspect: '4:3', seed: null,
     redo: false, estimateOnly: false, model: null,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -46,10 +46,12 @@ async function run(args, deps = {}) {
   if (!args.runDir || !args.label || !args.out) {
     throw new Error('run: --run-dir, --label and --out are required');
   }
-  // Normalize args from batch jobs JSON: default the backend and accept a
-  // singular `reference` field (used by the bible-class web phases).
+  // Normalize args from batch jobs JSON: route the backend by model when the
+  // caller did not pin one (gemini image models must not hit the OpenAI
+  // endpoint), then default the rest. Accept a singular `reference` field
+  // (used by the bible-class web phases).
   args = { ...args };
-  if (!args.backend) args.backend = 'openai-fetch';
+  if (!args.backend) args.backend = resolveBackendForModel(args.model) || 'openai-fetch';
   if (!args.references || !args.references.length) {
     args.references = args.reference ? [args.reference] : [];
   }
