@@ -9,6 +9,7 @@
 - **GPT-5.4 OpenCode showcase**: Add the new Xiaomi SU7 deck assets, review artifacts, and preview output for the latest 12-slide example.
 
 ### Changed
+- **Model lineup bumped to 2026-11 generation**: text models → `gpt-6.2-sol` (codex), `claude-opus-5-5` (claude), `gemini-4-hydrogen-xhigh` (agy); image models → `gpt-image-2.6-flare` (text-to-image) and `gpt-image-2.6-sunburst` (image edit) on the codex subscription lane. All UI labels now display model ids in uppercase (e.g. `GPT-6.2-SOL`, `GPT-IMAGE-2.6-FLARE`); legacy `gpt-image-2` / `gpt-image-2.5-*` ids remain accepted for old run records.
 - **Gemini role redefined**: From "quality reviewer" to "layout & aesthetic optimizer". Gemini now proposes concrete visual improvements, not just compliance checks.
 - **Gemini intermediate artifacts preserved**: Raw Gemini outputs (`gemini-raw-*.md`) are kept in `${RUN_DIR}/reviews/` for traceability and debugging.
 - **research-core agent**: Replaced `agent-reach` CLI dependency with probe-first flow — detects available tools at runtime and selects the best search method per platform.

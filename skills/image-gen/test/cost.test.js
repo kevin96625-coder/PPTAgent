@@ -30,8 +30,8 @@ test('gemini-fetch prices gemini-3.1-flash-image per image', () => {
   assert.ok(Math.abs(r.estUsdTotal - 8 * PRICES['gemini-fetch']['gemini-3.1-flash-image']) < 1e-9);
 });
 
-test('openai-fetch prices both gpt-image-2.5 tiers', () => {
-  for (const m of ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst']) {
+test('openai-fetch prices both gpt-image-2.6 tiers', () => {
+  for (const m of ['gpt-image-2.6-flare', 'gpt-image-2.6-sunburst']) {
     const r = estimate({ backend: 'openai-fetch', model: m, count: 2 });
     assert.ok(Math.abs(r.estUsdTotal - 2 * PRICES['openai-fetch'][m]) < 1e-9, m);
   }
@@ -46,7 +46,7 @@ test('agy-cli is zero metered cost and echoes the requested model', () => {
 });
 
 test('codex-cli estimate echoes the requested image model', () => {
-  const r = estimate({ backend: 'codex-cli', model: 'gpt-image-2.5-flare', count: 1 });
+  const r = estimate({ backend: 'codex-cli', model: 'gpt-image-2.6-flare', count: 1 });
   assert.strictEqual(r.estUsdTotal, 0);
-  assert.strictEqual(r.model, 'gpt-image-2.5-flare');
+  assert.strictEqual(r.model, 'gpt-image-2.6-flare');
 });

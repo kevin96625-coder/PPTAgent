@@ -1,6 +1,6 @@
 ---
 name: image-gen
-description: Generate AI images with character-consistency for slide decks. Subscription-first model routing (2026) — gpt-image-2.5-flare / gpt-image-2.5-sunburst run on the local codex CLI's built-in image tool (ChatGPT subscription, zero metered cost), gemini-3.1-flash-image runs on the local agy (Antigravity) CLI's built-in image tool (Google subscription, zero metered cost). All three cover text-to-image, image-to-image and image editing. Metered HTTP backends (openai-fetch / gemini-fetch) remain available when pinned explicitly. Use when a slide needs a generated illustration, or a multi-scene series must keep one character visually consistent.
+description: Generate AI images with character-consistency for slide decks. Subscription-first model routing (2026) — gpt-image-2.6-flare / gpt-image-2.6-sunburst run on the local codex CLI's built-in image tool (ChatGPT subscription, zero metered cost), gemini-3.1-flash-image runs on the local agy (Antigravity) CLI's built-in image tool (Google subscription, zero metered cost). All three cover text-to-image, image-to-image and image editing. Metered HTTP backends (openai-fetch / gemini-fetch) remain available when pinned explicitly. Use when a slide needs a generated illustration, or a multi-scene series must keep one character visually consistent.
 ---
 
 # image-gen
@@ -13,11 +13,11 @@ description: Generate AI images with character-consistency for slide decks. Subs
 ## Environment
 Run `node check_env.js` first. `codex-cli` requires the official Codex CLI authenticated via "Sign in with ChatGPT"; `agy-cli` requires the Antigravity `agy` CLI authenticated with a Google account. Do NOT set `OPENAI_API_KEY` in the environment when using `codex-cli` — it would switch Codex to billed API pricing.
 
-## Selectable image models (2026-09, subscription-first)
+## Selectable image models (2026-11, subscription-first)
 | Model id | CLI | Backend | Billing | Flows |
 |----------|-----|---------|---------|-------|
-| `gpt-image-2.5-flare` | codex | `codex-cli` | ChatGPT sub, $0 metered | t2i / i2i / edit |
-| `gpt-image-2.5-sunburst` | codex | `codex-cli` | ChatGPT sub, $0 metered | t2i / i2i / edit |
+| `gpt-image-2.6-flare` | codex | `codex-cli` | ChatGPT sub, $0 metered | t2i / i2i / edit |
+| `gpt-image-2.6-sunburst` | codex | `codex-cli` | ChatGPT sub, $0 metered | t2i / i2i / edit |
 | `gemini-3.1-flash-image` | agy | `agy-cli` | Google sub, $0 metered | t2i / i2i / edit |
 | `gpt-image-2` (legacy) | codex | `codex-cli` | ChatGPT sub, $0 metered | t2i / i2i / edit |
 
@@ -32,7 +32,7 @@ Gemini models never silently fall back to a GPT backend.
 ```
 node scripts/generate.js \
   --run-dir <RUN_DIR> --label scene-03 --out <RUN_DIR>/images/scene-03.png \
-  --model gpt-image-2.5-flare \
+  --model gpt-image-2.6-flare \
   --prompt-file <RUN_DIR>/briefs/scene-03.txt \
   --identity-file <RUN_DIR>/style.lock.identity.txt \
   --style-file <RUN_DIR>/style.lock.style.txt \

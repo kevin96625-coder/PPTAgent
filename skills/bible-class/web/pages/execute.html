@@ -283,11 +283,11 @@
 <script>
 const runId=location.pathname.split('/')[2];
 let phaseData=[];let activePhase=null;let logOpen=false;let runModel=null;
-const MODEL_LABELS={gpt:'GPT-6.1 Sol',claude:'Claude Opus 4.8',gemini:'Gemini 3.8 Flash'};
+const MODEL_LABELS={gpt:'GPT-6.2-SOL',claude:'CLAUDE-OPUS-5-5',gemini:'GEMINI-4-HYDROGEN-XHIGH'};
 const IMAGE_MODEL_OPTIONS={
-  'gpt-image-2.5-flare':'GPT Image 2.5 Flare (OpenAI)',
-  'gpt-image-2.5-sunburst':'GPT Image 2.5 Sunburst (OpenAI)',
-  'gemini-3.1-flash-image':'Gemini 3.1 Flash Image (Google)'
+  'gpt-image-2.6-flare':'GPT-IMAGE-2.6-FLARE (OpenAI)',
+  'gpt-image-2.6-sunburst':'GPT-IMAGE-2.6-SUNBURST (OpenAI)',
+  'gemini-3.1-flash-image':'GEMINI-3.1-FLASH-IMAGE (Google)'
 };
 
 async function load(){

@@ -26,9 +26,9 @@ test('run routes gemini image models to the agy subscription backend', async () 
   assert.strictEqual(out.estimate.model, 'gemini-3.1-flash-image');
 });
 
-test('run estimates fine for gpt-image-2.5 tiers via codex routing', async () => {
+test('run estimates fine for gpt-image-2.6 tiers via codex routing', async () => {
   const dir = tmpRun();
-  for (const m of ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst']) {
+  for (const m of ['gpt-image-2.6-flare', 'gpt-image-2.6-sunburst']) {
     const out = await run({
       runDir: dir, label: `scene-${m}`, out: path.join(dir, 'o.png'),
       prompt: 'a lamb', model: m, estimateOnly: true,

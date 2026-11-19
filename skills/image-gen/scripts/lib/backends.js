@@ -15,17 +15,17 @@ const SIZES = {
 
 const DEFAULT_MODEL = 'gpt-image-2';
 
-// ── image model registry (2026-09) ──────────────────────────────────────────
+// ── image model registry (2026-11) ──────────────────────────────────────────
 // Subscription-first routing, matching FEASIBILITY_SUBSCRIPTION_AUTH.md:
 //   GPT image models    → codex CLI's built-in image_gen tool (ChatGPT sub, $0)
 //   Gemini image models → agy (Antigravity) CLI's built-in image tool (Google sub, $0)
 // Metered HTTP backends (openai-fetch / gemini-fetch) remain available when
 // pinned explicitly via --backend.
 const IMAGE_MODELS = {
-  'gpt-image-2': { backend: 'codex-cli', label: 'GPT Image 2' },
-  'gpt-image-2.5-flare': { backend: 'codex-cli', label: 'GPT Image 2.5 Flare' },
-  'gpt-image-2.5-sunburst': { backend: 'codex-cli', label: 'GPT Image 2.5 Sunburst' },
-  'gemini-3.1-flash-image': { backend: 'agy-cli', label: 'Gemini 3.1 Flash Image' },
+  'gpt-image-2': { backend: 'codex-cli', label: 'GPT-IMAGE-2 (LEGACY)' },
+  'gpt-image-2.6-flare': { backend: 'codex-cli', label: 'GPT-IMAGE-2.6-FLARE' },
+  'gpt-image-2.6-sunburst': { backend: 'codex-cli', label: 'GPT-IMAGE-2.6-SUNBURST' },
+  'gemini-3.1-flash-image': { backend: 'agy-cli', label: 'GEMINI-3.1-FLASH-IMAGE' },
 };
 
 function resolveBackendForModel(model) {
@@ -228,7 +228,7 @@ function buildCodexInstruction({ fullPrompt, references, outPath }) {
 // driver text model that runs the agent loop; the image model itself is the
 // backend's built-in (gemini-3.1-flash-image).
 
-const AGY_DRIVER_MODEL = 'gemini-3.8-flash-high';
+const AGY_DRIVER_MODEL = 'gemini-4-hydrogen-xhigh';
 
 function buildAgyArgs() {
   // NOTE: --model must precede -p (agy errors when -p swallows the next flag).
@@ -363,7 +363,7 @@ async function dispatch(opts) {
     if (!res || res.code !== 0) {
       throw new Error(`codex-cli failed (code ${res && res.code}): ${res && res.stderr}`);
     }
-    return { imagePath: outPath, meta: { backend, model: opts.model || 'gpt-image-2' } };
+    return { imagePath: outPath, meta: { backend, model: opts.model || 'gpt-image-2.6-flare' } };
   }
 
   if (backend === 'agy-cli') {

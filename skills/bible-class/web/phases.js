@@ -45,7 +45,7 @@ function readRunMeta(rd) {
 
 // Selectable image-generation models (image-gen registry). Empty string means
 // "no explicit choice" → generate.js falls back to its historical default.
-const IMAGE_MODEL_IDS = ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst', 'gemini-3.1-flash-image'];
+const IMAGE_MODEL_IDS = ['gpt-image-2.6-flare', 'gpt-image-2.6-sunburst', 'gemini-3.1-flash-image'];
 function resolveImageModel(opts, rd) {
   const m = (opts && opts.imageModel) || readRunMeta(rd).imageModel || '';
   return IMAGE_MODEL_IDS.includes(m) ? m : '';
@@ -676,10 +676,10 @@ ${fileList}
 
 IMPORTANT: Read EVERY image file first, then produce the JSON output.`;
 
-  onLine('info', `$ claude -p --model claude-opus-4-8`);
+  onLine('info', `$ claude -p --model claude-opus-5-5`);
   const args = [
     '-p', prompt,
-    '--model', 'claude-opus-4-8',
+    '--model', 'claude-opus-5-5',
     '--output-format', 'stream-json',
     '--verbose',
     '--allowedTools', 'Read',
@@ -766,10 +766,10 @@ Remember: output ONLY the JSON object, nothing else.`;
 // Single-shot text generation (no agentic file-writing loop — much faster).
 async function runCodexText(prompt, cwd, onLine, runId) {
   const outputFile = path.join(os.tmpdir(), `codex-outline-${Date.now()}.txt`);
-  onLine('info', `$ codex exec -m gpt-6.1-sol (single-shot)`);
+  onLine('info', `$ codex exec -m gpt-6.2-sol (single-shot)`);
   await spawnLog('codex', [
     'exec',
-    '-m', 'gpt-6.1-sol',
+    '-m', 'gpt-6.2-sol',
     '-c', 'model_reasoning_effort=high',
     '-c', 'mcp_servers={}',
     '--dangerously-bypass-approvals-and-sandbox',
@@ -790,9 +790,9 @@ async function runCodexText(prompt, cwd, onLine, runId) {
 // the same -p headless + @file image-reference pattern.
 // NOTE: --model must precede -p (agy errors out when -p swallows the next flag).
 function runGeminiText(prompt, cwd, onLine, runId) {
-  onLine('info', `$ agy -m gemini-3.8-flash-high -p (single-shot)`);
+  onLine('info', `$ agy -m gemini-4-hydrogen-xhigh -p (single-shot)`);
   return spawnLog('agy', [
-    '--model', 'gemini-3.8-flash-high',
+    '--model', 'gemini-4-hydrogen-xhigh',
     '--dangerously-skip-permissions',
     '-p', prompt,
   ], { cwd, _runId: runId }, onLine).then((stdout) =>
@@ -879,11 +879,11 @@ Extract and output ONLY a JSON object with these fields:
 Output valid JSON only.`;
 
   const outputFile = path.join(path.dirname(path.dirname(imagePaths[0])), 'vision-codex-output.txt');
-  onLine('info', `$ codex exec -m gpt-6.1-sol`);
+  onLine('info', `$ codex exec -m gpt-6.2-sol`);
   const args = [
     'exec',
     ...imgFlags,
-    '-m', 'gpt-6.1-sol',
+    '-m', 'gpt-6.2-sol',
     '-c', 'model_reasoning_effort=high',
     '-c', 'mcp_servers={}',
     '--dangerously-bypass-approvals-and-sandbox',
@@ -918,9 +918,9 @@ After reading ALL images, extract and output ONLY a JSON object:
 
 Output valid JSON only.`;
 
-  onLine('info', `$ agy -m gemini-3.8-flash-high (${imagePaths.length} images via @file refs)`);
+  onLine('info', `$ agy -m gemini-4-hydrogen-xhigh (${imagePaths.length} images via @file refs)`);
   // Headless file reads need tool permissions auto-approved (read-only prompt).
-  const args = ['--model', 'gemini-3.8-flash-high', '--dangerously-skip-permissions', '-p', prompt];
+  const args = ['--model', 'gemini-4-hydrogen-xhigh', '--dangerously-skip-permissions', '-p', prompt];
   let stdout = '';
   await new Promise((resolve, reject) => {
     const child = spawn('agy', args, {

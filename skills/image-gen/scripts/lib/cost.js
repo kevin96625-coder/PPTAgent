@@ -1,7 +1,8 @@
 'use strict';
 
-// Per-image USD prices (2026-09). gpt-image-2.5-* and gemini-3.1-flash-image
+// Per-image USD prices (2026-11). gpt-image-2.6-* and gemini-3.1-flash-image
 // entries are estimates pending official vendor sheets — adjust when published.
+// gpt-image-2.5-* rows stay for legacy run records.
 const PRICES = {
   'gemini-api': {
     'nano-banana': 0.039,
@@ -15,17 +16,21 @@ const PRICES = {
     'gpt-image-2': 0.04,
     'gpt-image-2.5-flare': 0.04,
     'gpt-image-2.5-sunburst': 0.06,
+    'gpt-image-2.6-flare': 0.04,
+    'gpt-image-2.6-sunburst': 0.06,
   },
   // Direct-fetch OpenAI backend — same models/prices as openai-api.
   'openai-fetch': {
     'gpt-image-2': 0.04,
     'gpt-image-2.5-flare': 0.04,
     'gpt-image-2.5-sunburst': 0.06,
+    'gpt-image-2.6-flare': 0.04,
+    'gpt-image-2.6-sunburst': 0.06,
   },
 };
 
 const DEFAULT_MODEL = {
-  'codex-cli': 'gpt-image-2',
+  'codex-cli': 'gpt-image-2.6-flare',
   'agy-cli': 'gemini-3.1-flash-image',
   'gemini-api': 'nano-banana-2',
   'gemini-fetch': 'gemini-3.1-flash-image',
@@ -45,7 +50,7 @@ function estimate(opts) {
       estUsdTotal: 0,
       meteredImages: 0,
       quotaNote: `Covered by ChatGPT subscription; image turns drain Codex quota ~3-5x faster than text (${n} images).`,
-      model: opts.model || 'gpt-image-2',
+      model: opts.model || 'gpt-image-2.6-flare',
     };
   }
   if (backend === 'agy-cli') {

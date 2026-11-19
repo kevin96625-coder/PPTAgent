@@ -83,8 +83,8 @@ test('unknown backend throws', async () => {
 // ── image model routing + CLI backends ──────────────────────────────────────
 
 test('resolveBackendForModel routes subscription-first: GPT→codex, Gemini→agy', () => {
-  assert.strictEqual(resolveBackendForModel('gpt-image-2.5-flare'), 'codex-cli');
-  assert.strictEqual(resolveBackendForModel('gpt-image-2.5-sunburst'), 'codex-cli');
+  assert.strictEqual(resolveBackendForModel('gpt-image-2.6-flare'), 'codex-cli');
+  assert.strictEqual(resolveBackendForModel('gpt-image-2.6-sunburst'), 'codex-cli');
   assert.strictEqual(resolveBackendForModel('gpt-image-2'), 'codex-cli');
   assert.strictEqual(resolveBackendForModel('gemini-3.1-flash-image'), 'agy-cli');
   assert.strictEqual(resolveBackendForModel('nano-banana-2'), 'agy-cli');
@@ -120,10 +120,10 @@ test('agy-cli dispatch fails loudly when the CLI exits without writing the image
 
 test('codex-cli meta echoes the requested image model', async () => {
   const r = await dispatch({
-    backend: 'codex-cli', model: 'gpt-image-2.5-sunburst', fullPrompt: 'x', references: [],
+    backend: 'codex-cli', model: 'gpt-image-2.6-sunburst', fullPrompt: 'x', references: [],
     outPath: '/tmp/o.png', runner: async () => ({ code: 0, stdout: '', stderr: '' }), env: {},
   });
-  assert.strictEqual(r.meta.model, 'gpt-image-2.5-sunburst');
+  assert.strictEqual(r.meta.model, 'gpt-image-2.6-sunburst');
 });
 
 test('buildGeminiBody: text-only prompt is pure text-to-image with aspect', () => {
