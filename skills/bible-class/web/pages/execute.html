@@ -299,6 +299,17 @@ async function load(){
   const imSel=document.getElementById('optImageModel');
   imSel.innerHTML='<option value="">跟随 Run 设置'+(runInfo.imageModel?`（${IMAGE_MODEL_OPTIONS[runInfo.imageModel]||runInfo.imageModel}）`:'（默认 GPT Image）')+'</option>'
     +Object.entries(IMAGE_MODEL_OPTIONS).map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+  // Style preset dropdown must reflect the run's CURRENT lock — a page
+  // refresh would otherwise reset it to flat-cartoon and a careless Re-run
+  // would silently re-lock the run into a different style.
+  const curPreset=(runInfo.lock&&runInfo.lock.style_preset)||'';
+  const psel=document.getElementById('optPreset');
+  if(psel&&curPreset){
+    if(![...psel.options].some(o=>o.value===curPreset)){
+      const extra=document.createElement('option');extra.value=curPreset;extra.textContent=curPreset;psel.appendChild(extra);
+    }
+    psel.value=curPreset;
+  }
   document.getElementById('topTitle').textContent=runInfo.title||runId;
   document.getElementById('backLink').href=`/run/${runId}`;
   phaseData=phases.phases||[];
@@ -476,6 +487,18 @@ function execPhase(key){
       catch(e){
         appendLog('err',`Character Description JSON 解析失败，已忽略该字段: ${e.message}`);
       }
+    }
+    // Re-running a completed master phase must force regeneration: the backend
+    // skips existing master PNGs unless forceMaster is passed (protects the
+    // "add a new character" flow), which would make this Re-run a silent no-op
+    // on multi-character runs.
+    if(key==='generate-master'&&phaseData.some(p=>p.key==='generate-master'&&p.completed)){
+      if(!confirm('「Re-run 生成定妆照」会重新生成【所有角色】的定妆照并覆盖现有图片（每张约需数分钟）。\n\n如只想补画某个角色，可到 Run 详情页删除对应的 master/xxx.png 后再点 Execute（已有图片会被保留）。')){
+        activePhase=null;tag.textContent='Idle';tag.className='tag idle';render();
+        resolve();return;
+      }
+      opts.forceMaster=true;
+      appendLog('info','forceMaster=true：将重新生成所有角色的定妆照');
     }
 
     let es = null;

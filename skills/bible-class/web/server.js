@@ -27,7 +27,9 @@ const MIME = {
 function mimeFor(ext) { return MIME[ext] || 'application/octet-stream'; }
 
 function send(res, code, body, ext) {
-  res.writeHead(code, { 'Content-Type': mimeFor(ext || '.html') });
+  // no-cache: the UI evolves during sessions (bug fixes to inline JS); a
+  // heuristically cached stale page keeps running old code after fixes land.
+  res.writeHead(code, { 'Content-Type': mimeFor(ext || '.html'), 'Cache-Control': 'no-cache' });
   res.end(body);
 }
 

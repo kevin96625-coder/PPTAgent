@@ -180,6 +180,7 @@ const phases = {
 
       // Minimal YAML reader reused from write_style_lock.js CLI (flat fields only).
       const presetYaml = readPresetYaml(presetFile);
+      onLine('info', `Style preset: ${preset}（重新生成 style.lock.json / identity / style 文本）`);
 
       // Read the outline once.
       let outline = null;
